@@ -1,0 +1,89 @@
+\documentclass[12pt,a4paper]{article}
+
+% Links
+\usepackage{hyperref}
+\usepackage{xcolor}
+\definecolor{linkcolour}{rgb}{0,0.2,0.6}
+\hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
+
+\title{\textbf{Project Proposal \\ \small{Concepts of Program Design}}}
+\author{\small{Joris ten Tusscher, Joris Burgers, Ivo-Gabe de Wolff, Cas van der Rest, Orestis Melkonian}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Background}
+\begin{itemize}
+	\item{Reversible Computation}
+	\item{Janus}
+	\item{other languages}
+	\item{a bit of theory}
+\end{itemize}
+
+\section{Problem}
+\begin{itemize}
+	\item{Experiment}
+	
+	\item{Extensions}
+	\begin{itemize}
+		\item{Data structures (trees/sets/maps/ADTs)}
+		\item{Prelude}
+		\item{Syntactic sugar}
+	\end{itemize}
+	
+	\item{Applications}
+	\begin{itemize}
+		\item{Reverse Debugging}
+		\item{Graph search}
+		\item{Encoder-Decoder}
+		\item{Text editor}
+		\item{Reversible Interpreter}
+	\end{itemize}
+	
+	\item{Benchmarking}
+	\begin{itemize}
+		\item{Janus vs rFun}
+		\item{LOC metrics}
+	\end{itemize}
+	
+	\item{Formal verification}
+	\begin{itemize}
+		\item{Reversibility}
+		\item{Verifying pre/post-conditions}
+		\item{r-Turing Completeness}
+	\end{itemize}
+	
+\end{itemize}
+
+\section{Methodology}
+\begin{itemize}
+	\item{Template Haskell \footnote{\url{https://wiki.haskell.org/Template_Haskell}}}
+	\begin{itemize}
+		\item{Embedding Janus}
+		\item{Compile-time guarantees}
+		\begin{itemize}
+			\item{Type-checking}
+			\item{Variable usage}
+		\end{itemize}
+		
+	\end{itemize}
+	
+	\item{GHC Profiling}
+	\begin{itemize}
+		\item{Criterion package \footnote{\url{http://hackage.haskell.org/package/criterion})}}
+	\end{itemize}
+	
+	\item{Liquid Haskell \footnote{\url{https://ucsd-progsys.github.io/liquidhaskell-blog/})}}
+	\begin{itemize}
+		\item{Theorem proving}
+	\end{itemize}
+\end{itemize}
+
+\section{Planning}
+\begin{itemize}
+	\item{Milestones}
+	\item{Division of labour}
+\end{itemize}
+
+\end{document}

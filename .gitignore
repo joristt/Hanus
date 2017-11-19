@@ -1,3 +1,4 @@
+# Stack/Cabal
 dist
 dist-*
 cabal-dev
@@ -18,3 +19,9 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+# Latex
+*.aux
+*.log
+*.out
+*.gz
+
