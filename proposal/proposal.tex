@@ -1,8 +1,16 @@
 \documentclass[12pt,a4paper]{article}
 
+% Tables
+\usepackage{multicol}
+\usepackage{multirow}
+
+% Colors
+\usepackage{xcolor, color, colortbl}
+\colorlet{gray}{gray!70}
+\colorlet{green}{green!50}
+
 % Links
 \usepackage{hyperref}
-\usepackage{xcolor}
 \definecolor{linkcolour}{rgb}{0,0.2,0.6}
 \hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
 
@@ -77,9 +85,31 @@
 \end{itemize}
 
 \section{Planning}
-\begin{itemize}
-	\item{Milestones}
-	\item{Division of labour}
-\end{itemize}
 
+\setlength{\tabcolsep}{20pt}
+\renewcommand{\arraystretch}{1.6}
+\begin{center}
+\begin{tabular}{cl}
+\multirow{2}{*}{\textsc{week 1}} &
+	\textbf{Task 1:} Orestis,... \\ {} &
+	\textbf{Task 2:} Cas,... \\ \hline
+\multirow{2}{*}{\textsc{week 2}} &
+	\textbf{Task 3:} Joris1, Joris2,... \\ {} &
+\textbf{Task 4:} Ivo,... \\ \hline
+\multirow{2}{*}{\textsc{week 3}} &
+	\textbf{Task 1:} Orestis,... \\ {} &
+	\textbf{Task 2:} Cas,... \\
+\rowcolor{green} \multicolumn{2}{c}{\textsc{Progress Report}} \\
+\multirow{2}{*}{\textsc{week 4}} &
+	\textbf{Task 3:} Joris1, Joris2,... \\ {} &
+	\textbf{Task 4:} Ivo,... \\ \hline
+\multirow{2}{*}{\textsc{week 5}} &
+	\textbf{Task 1:} Orestis,... \\ {} &
+	\textbf{Task 2:} Cas,... \\ \hline
+\multirow{2}{*}{\textsc{week 6}} &
+	\textbf{Task 3:} Joris1, Joris2,... \\ {} &
+	\textbf{Task 4:} Ivo,... \\
+\rowcolor{green} \multicolumn{2}{c}{\textsc{Project Submission}}
+\end{tabular}
+\end{center}
 \end{document}
