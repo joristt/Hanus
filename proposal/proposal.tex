@@ -33,12 +33,20 @@
 	\subsection{Experiment}
 	
 	\subsection{Extensions}
-	\begin{itemize}
-		\item{Data structures (trees/sets/maps/ADTs)}
-		\item{Prelude}
-		\item{Syntactic sugar}
-	\end{itemize}
+	We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
 	
+	\subsubsection{Local variables and parameters}
+	The first addition is the possibility to declare local variables. In the original version of Janus, all variables were global. The version of (??? reference paper ???) included local variables. Those variables need to be declared before use with an initial value (\texttt{local int n = 0}) and, when they go out of scope, with a final value (\texttt{delocal int n = 42}). This final value is used as an assertion if the program is executed in the natural direction, and used as an initial value if the program is reversed.
+	
+	Local variables can also be used to desugar program calls with parameters. In the initial version of Janus, no parameters were supported as all variables were global. When local variables are supported, parameters can be easily added.
+	
+	\subsubsection{Multiple or arbitrary types}
+	We would like to add support for different types. When we start, all variables should be typed as integers. Janus also supports stacks and arrays of integers, which we could add to our DSL.
+	
+	For more usability, we could add support for arbitrary types. A user could then easily use a certain type in our DSL by providing some elementary reversible operations such as \texttt{+=} and \texttt{-=} for numbers.
+	
+	Usability can also be increased by adding more reversible operations such as XOR.
+
 	\subsection{Applications}
 	\begin{itemize}
 		\item{Pathfinding algorithms}
