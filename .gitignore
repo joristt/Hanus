@@ -24,4 +24,5 @@ cabal.project.local
 *.log
 *.out
 *.gz
+./proposal/*.pdf
 
