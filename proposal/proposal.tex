@@ -30,6 +30,15 @@
 	\item{other languages}
 	\item{a bit of theory}
 \end{itemize}
+\subsection{Logical and Physical Reversibility}
+	The notion of reversible computations can generally be broken down in two main categories: \textit{physical reversibility} and \textit{logical reversibility}. The former concerns the usage of physically reversible processes to carry out computations and has theoretical applications in the creation of more cost-efficient hardware\cite{frank05}. Logical reversibility is the study of computations that can be \textit{undone}, i.e. we can reconstruct the initial state of a computation solely from it's result and the computation itself. Reversible programming languages are part of the domain of logical reversibility. 
+\subsection{Computational Expressiveness}
+Reversible Turing machines can be used to define the computational expressiveness of programs written in reversible languages. They differ from regular deterministic Turing machines in that they are not only forward deterministic, but also backward deterministic. See \cite{axelsen11} for the exact definition of reversible Turing machines. (Reversible) programming languages that are able to simulate any reversible Turing machine are said to be r-Turing complete. \\ \\
+This means that, when we think about reversible programming languages on a more abstract level, any function describing an atomic transition within the program's state space has to be injective. This imposes some practical limitations on the design of reversible programming languages. Multiplication and assignment are examples that are found in most programming languages and are non-injective, meaning that they cannot be incorporated into reversible programming languages in the same way as in regular programming languages.  
+
+\subsection{Reversible Programming Languages}
+Notable attempts at designing reversible programming languages include the language \textit{Janus}\cite{lutz82}. An example of how Janus deals with the previously described limitations is that it only allows combined assignment and modification of variables with the +=, -= and != operators. The result is a language that quite nicely demonstrates the concept of reversible programming languages, but is simultaneously fairly unpractical due to it's reversible nature. The semantics of Janus were later formalized by Yokoyama\cite{yokoyama10} \\ \\
+Other examples of proposed reversible programming languages include the functional language RFUN \cite{yokoyama11}\cite{thomsen15}, Inv\cite{hu04}, Arrow\cite{rose15} and the objective oriented language Joule\cite{shultz16}.
 
 \section{Problem}
 	\subsection{Experiment}
@@ -116,6 +125,41 @@ There are a number of risks to consider when creating a DSL, which are specified
 \subsection{Goal}
 
 \section{Planning}
+\begin{itemize}
+	\item{Milestones}
+	\item{Division of labour}
+\end{itemize}
+\newpage
+\begin{thebibliography}{99}
+\bibitem{frank05}
+Frank, M. P. (2005, May). Introduction to reversible computing: motivation, progress, and challenges. In Proceedings of the 2nd Conference on Computing Frontiers (pp. 385-390). ACM.
+
+\bibitem{axelsen11}
+Axelsen, H. B., \& Gl{\"u}ck, R. (2011, March). What do reversible programs compute? 
+In FoSSaCS (pp. 42-56).
+
+\bibitem{lutz82}
+Lutz, C., \& Derby, H. (1982). Janus: a time-reversible language. Caltech class project.
+
+\bibitem{yokoyama11}
+Yokoyama, T., Axelsen, H. B., \& Glück, R. (2011). Towards a Reversible Functional Language. RC, 7165, 14-29.
+
+\bibitem{thomsen15}
+Thomsen, M. K., \& Axelsen, H. B. (2015, September). Interpretation and programming of the reversible functional language RFUN. In Proceedings of the 27th Symposium on the Implementation and Application of Functional Programming Languages (p. 8). ACM.
+
+\bibitem{hu04}
+Mu, S. C., Hu, Z., \& Takeichi, M. (2004, July). An injective language for reversible computation. In MPC (pp. 289-313).
+
+\bibitem{rose15}
+Rose, E. (2015). Arrow: A Modern Reversible Programming Language (Doctoral dissertation, Oberlin College).
+
+\bibitem{shultz16}
+Schultz, U. P., \& Axelsen, H. B. (2016, July). Elements of a Reversible Object-Oriented Language. In International Conference on Reversible Computation (pp. 153-159). Springer International Publishing.
+
+\bibitem{yokoyama10}
+Yokoyama, T. (2010). Reversible computation and reversible programming languages. Electronic Notes in Theoretical Computer Science, 253(6), 71-81.
+
+\end{thebibliography}
 
 \setlength{\tabcolsep}{20pt}
 \renewcommand{\arraystretch}{1.6}
