@@ -40,11 +40,16 @@
 	\end{itemize}
 	
 	\subsection{Applications}
+	Although, logically, certain programs cannot be implemented in a reversible language, some definitely can be. A few applications that can be implemented in a time-reversible language will be implemented in Janus as part of this project:
 	\begin{itemize}
-		\item{Pathfinding algorithms}
-        \item{Encoding-Decoding}
-        \item{Low-level bit manipulation (hamming error correction)}
-        \item{[Optional] Reversible Debugger}
+		\item
+			a pathfinding algorithm such as BFS or DFS, where you can also automatically backtrack;
+	        \item
+	        		a simple encoding or symmetric encryption algorithm, which can also be decoded or decrypted using the inverse function;
+	        	\item
+			the Hamming(7,4) function, which takes 4 bits as input and returns the four input bits plus three parity bits that can be used to correct an incorrect bit\cite{hamming}. The inverse if Hamming(7,4) can, given the 7 bits, return the 4 original input bits, assuming that at most 1 of the 7 bits is incorrect.
+        		\item
+			Optional: a debugger in which one can go back in time, i.e. reverse already executed statements. This will likely be much more difficult to implement than the other application mentioned above, so it will only be implemented if there is time left.
 	\end{itemize}
 	
 	\subsection{Benchmarking}
@@ -112,4 +117,11 @@
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Project Submission}}
 \end{tabular}
 \end{center}
+
+\newpage
+\begin{thebibliography}{99}
+\bibitem{hamming}
+Hamming, R. W. (1950). Error detecting and error correcting codes. Bell Labs Technical Journal, 29(2), 147-160.
+\end{thebibliography}
+
 \end{document}
