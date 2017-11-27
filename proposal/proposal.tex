@@ -16,9 +16,6 @@
 \section{Background}
 \begin{itemize}
 	\item{Reversible Computation}
-	\item{Janus}
-	%JB: maybe part of this paragraph should be added under reversible computation
-		Janus is a programming language that is developed in 1982 by Chrisoper Lutz and Hower Derby \cite{r:lutz-derby1982}. The main feature of Janus is that the language is time-reversible. Time-reversible means that every statement in the language can be inverted. This means that at any moment, the program can be executed in reverse. This reverse execution can also be done if the program was not executed before the reverse execution. An example of this is the statement $x+=7$. This inverse of this statement is $x-=7$. Even if the statement $x+=7$ was never executed, the program could be done backwards, given any valid final state of the program. Please note that not every operation can be inverted. Take for example the expression $x*=0$. This expression has no inverse and is therefore not a valid Janus statement.
 	\item{other languages}
 	\item{a bit of theory}
 \end{itemize}
@@ -27,7 +24,7 @@
 	\subsection{Experiment}
 	
 	\subsection{Janus}
-	We want to implement the reversable programming language Janus as an DSL in Haskell. For the syntax and semantics the defenitions as given by Lutz en Derby \cite{r:lutz-derby1982} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Beside this limitation, the DSL will also have the change that expressions can be any valid Haskell expression, in addition to the already valid Janus expressions. This includes function calls to Haskell expression. This gives a programmer the freedom to use existing Haskell code with the reversible DSL. This freedom of accepting Haskell code will not limit the reversibility of the DSL. This is because for a language to be reversible, the statement has to be reversible, not the expression. For example the statement $x += f$ where $f$ is any valid Haskell expression. As long as $f$ does not depend on $x$, the statement can be inverted by the statement $x -= f$.
+	We want to implement the reversible programming language Janus as an DSL in Haskell. For the syntax and semantics the definitions as given by Lutz en Derby \cite{r:lutz-derby1982} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Beside this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL. , since the semantics for Janus require statements to be reversible, but not right-hand expression. For instance, the statement $x += f$ where $f$ is any valid Haskell expression. As long as $f$ does not depend on $x$, the statement can be inverted by the statement $x -= f$.
 	
 	\subsection{Extensions}
 	\begin{itemize}
