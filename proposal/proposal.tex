@@ -24,13 +24,15 @@
 \section{Background}
 \begin{itemize}
 	\item{Reversible Computation}
-	\item{Janus}
 	\item{other languages}
 	\item{a bit of theory}
 \end{itemize}
 
 \section{Problem}
 	\subsection{Experiment}
+	
+	\subsection{Janus}
+	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{r:lutz-derby1982} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement $x += f$ where $f$ is any valid Haskell expression. As long as $f$ does not depend on $x$, the statement can be inverted by the statement $x -= f$.
 	
 	\subsection{Extensions}
 	\begin{itemize}
@@ -41,7 +43,7 @@
 	
 	\subsection{Applications}
 	\begin{itemize}
-		\item{Pathfinding algorithms}
+		\item{Path finding algorithms}
         \item{Encoding-Decoding}
         \item{Low-level bit manipulation (hamming error correction)}
         \item{[Optional] Reversible Debugger}
