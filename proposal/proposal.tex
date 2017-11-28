@@ -84,6 +84,11 @@
 	\end{itemize}
 \end{itemize}
 
+\subsection{Expected outcome}
+At the end of the project, we expect to have a functioning Janus DSL, that supports all features from the initial Janus version (citation needed: original Janus paper). We expect that we have implemented local variables and function arguments from the extended Janus version (citation needed) and we hope to have support for arbitrary types. If we could not implement the latter, we do not consider the project to be failed, but this makes the DSL is less usable. Furthermore, the implementation should have compile-time guarantees on the reversibility of programs.
+
+To demonstrate the usability of our DSL, we compare various applications in Janus with programs written using our embedded DSL. We will compare these examples by benchmarking and the readability or style of the code. Given that our DSL can make use of the power of Haskell, we assume that programs in our DSL will be shorter and more readable. It is hard to estimate the performance of our implementation, as this depends on how well the Haskell compiler (GHC) can optimize programs written in our DSL. However, the existing interpreters for Janus do not seem to be much optimized, so the bar for our implementation is low.
+
 \section{Planning}
 
 \setlength{\tabcolsep}{20pt}
