@@ -3,6 +3,7 @@
 % Tables
 \usepackage{multicol}
 \usepackage{multirow}
+\usepackage{csquotes}
 
 % Colors
 \usepackage{xcolor, color, colortbl}
@@ -31,6 +32,20 @@
 
 \section{Problem}
 	\subsection{Experiment}
+	The main research question that we want to be able to answer when we have conducted our experiment is:
+	
+	\begin{displayquote}
+	\textit{can we improve the usability of Janus by creating an embedded DSL in Haskell?}
+	\end{displayquote}
+	
+	\noindent In order to be able to answer this question, we will attempt to improve Janus in multiple ways:
+	\begin{itemize}
+		\item making it possible to put most Haskell expression on the right hand side of a Janus statement. See section \ref{sec:methodology} for an explanation on why not every possible Haskell expression is allowed.
+		\item Adding extra operators to Janus.
+		\item Verification of our Janus implementation using Liquid Haskell\ref{liquidhaskell}.
+		\item Extending Janus with arbitrary types, meaning that a user should be able to define a type, define operators that work on that type, define what the operators do and lastly, define what the inverse of every operator is.
+	\end{itemize}
+	Several Janus applications will be implemented and tested using our own Janus DSL and existing solutions, and the performances of the implementations will be measured and compared, for example by measuring execution time of the programs and memory usage. The performace will also be measured in ways that are not trivially quantifiable, for example by looking at the expressiveness of the different Janus implementations, and the lines of code every Janus implementation needs for the different applications that we will implement.
 	
 	\subsection{Extensions}
 	\begin{itemize}
@@ -61,6 +76,7 @@
 	\end{itemize}
 
 \section{Methodology}
+\label{sec:methodology}
 \begin{itemize}
 	\item{Template Haskell \footnote{\url{https://wiki.haskell.org/Template_Haskell}}}
 	\begin{itemize}
