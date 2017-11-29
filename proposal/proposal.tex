@@ -1,8 +1,11 @@
 \documentclass[12pt,a4paper]{article}
 
+\usepackage{minted}
+
 % Tables
 \usepackage{multicol}
 \usepackage{multirow}
+\usepackage{csquotes}
 
 % Colors
 \usepackage{xcolor, color, colortbl}
@@ -18,19 +21,45 @@
 \author{\small{Joris ten Tusscher, Joris Burgers, Ivo-Gabe de Wolff, Cas van der Rest, Orestis Melkonian}}
 \date{}
 
+% Macros
+\newcommand{\site}[1]{\footnote{\url{#1}}}
+\newcommand{\code}[1]{\mintinline{bash}{#1}}
+
 \begin{document}
 \maketitle
 
 \section{Background}
-\begin{itemize}
-	\item{Reversible Computation}
-	\item{Janus}
-	\item{other languages}
-	\item{a bit of theory}
-\end{itemize}
+\subsection{Logical and Physical Reversibility}
+	The notion of reversible computations can generally be broken down in two main categories: \textit{physical reversibility} and \textit{logical reversibility}. The former concerns the usage of physically reversible processes to carry out computations and has theoretical applications in the creation of more cost-efficient hardware\cite{frank05}. Logical reversibility is the study of computations that can be \textit{undone}, i.e. we can reconstruct the initial state of a computation solely from it's result and the computation itself. Reversible programming languages are part of the domain of logical reversibility. 
+\subsection{Computational Expressiveness}
+Reversible Turing machines can be used to define the computational expressiveness of programs written in reversible languages. They differ from regular deterministic Turing machines in that they are not only forward deterministic, but also backward deterministic. See \cite{axelsen11} for the exact definition of reversible Turing machines. (Reversible) programming languages that are able to simulate any reversible Turing machine are said to be r-Turing complete.
+
+This means that, when we think about reversible programming languages on a more abstract level, any function describing an atomic transition within the program's state space has to be injective. This imposes some practical limitations on the design of reversible programming languages. Multiplication and assignment are examples that are found in most programming languages and are non-injective, meaning that they cannot be incorporated into reversible programming languages in the same way as in regular programming languages.  
+
+\subsection{Reversible Programming Languages}
+Notable attempts at designing reversible programming languages include the language \textit{Janus}\cite{lutz82}. An example of how Janus deals with the previously described limitations is that it only allows combined assignment and modification of variables with the \code{+=}, \code{-=} and \code{^=} operators. The result is a language that quite nicely demonstrates the concept of reversible programming languages, but is simultaneously fairly unpractical due to it's reversible nature. The semantics of Janus were later formalized by Yokoyama\cite{yokoyama10}.
+
+Other examples of proposed reversible programming languages include the functional language RFUN \cite{yokoyama11}\cite{thomsen15}, Inv\cite{hu04}, Arrow\cite{rose15} and the object oriented language Joule\cite{schultz16}.
 
 \section{Problem}
 	\subsection{Experiment}
+	The main research question that we want to be able to answer when we have conducted our experiment is:
+	
+	\begin{displayquote}
+	\textit{can we improve the usability of Janus by implementing it as a DSL embedded in haskell?}
+	\end{displayquote}
+	
+	\noindent In order to be able to answer this question, we will attempt to improve Janus in multiple ways:
+	\begin{itemize}
+		\item making it possible to put most Haskell expressions on the right hand side of a Janus statement. See section \ref{subsec:template-haskell} for an explanation on why not every possible Haskell expression is allowed.
+		\item Adding extra operators to Janus.
+		\item Verification of our Janus implementation using Liquid Haskell\ref{liquidhaskell}.
+		\item Extending Janus with arbitrary types, meaning that a user should be able to define a type, define operators that work on that type, define what the operators do and lastly, define what the inverse of every operator is.
+	\end{itemize}
+	Several Janus applications will be implemented and tested using our own Janus DSL and existing solutions, and the performances of the implementations will be measured and compared, for example by measuring execution time of the programs, memory usage and the number of lines of code every Janus implementation needs for the different applications that we will implement. The performance will also be measured in ways that are not trivially quantifiable, for example by looking at the expressiveness of the different Janus implementations.
+	
+	\subsection{Janus}
+	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement \code{x += f} where \code{f} is any valid Haskell expression. As long as \code{f} does not depend on \code{x}, the statement can be inverted by the statement \code{x -= f}.
 	
 	\subsection{Extensions}
 	We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
@@ -48,52 +77,83 @@
 	Usability can also be increased by adding more reversible operations such as XOR.
 
 	\subsection{Applications}
+	Although a programmer will not always benefit from implementing a program in a reversible language, for example because the programmer has no interest in ever running the inverse of the program in the first place, he or she sometimes might. A few applications that bring benefits to the table when they are implemented in a time-reversible language will be implemented in Janus as part of this project:
 	\begin{itemize}
-		\item{Pathfinding algorithms}
-        \item{Encoding-Decoding}
-        \item{Low-level bit manipulation (hamming error correction)}
-        \item{[Optional] Reversible Debugger}
+		\item
+			a pathfinding algorithm such as BFS or DFS, where you can also automatically backtrack;
+	        \item
+	        		a simple encoding or symmetric encryption algorithm, which can also be decoded or decrypted using the inverse function;
+	        	\item
+			the Hamming(7,4) function, which takes 4 bits as input and returns the four input bits plus three parity bits that can be used to correct an incorrect bit\cite{hamming1950error}. The inverse if Hamming(7,4) can, given the 7 bits, return the 4 original input bits, assuming that at most 1 of the 7 bits is incorrect.
+        		\item
+			If there is sufficient time: a debugger in which one can go back in time, i.e. reverse already executed statements. This will likely be much more difficult to implement than the other applications mentioned above, so it will only be implemented if there is sufficient time.
 	\end{itemize}
 	
-	\subsection{Benchmarking}
+	\subsection{Comparison with Existing Implementations}
+    \subsubsection{Benchmarking}
+    We intend to compare the performance of our embedded DSL to existing implementations of the Janus language. We will do so by implementing the same algorithms in both our DSL and standard Janus, and comparing the time it takes the different implementations to compile and run the programs, as well as memory usage.
+    \subsubsection{Other Metrics}
+    Since our main goal is to improve the usability of Janus, it is hard to come up with metrics that provide a useful insight in the quality of our result. Certainly, performance alone will not be enough to capture the differences between the embedding and existing implementations. In order to attempt to measure the quality of our result beyond raw performance, we will compare our results with existing implementations with respect to the following aspects as well. 
 	\begin{itemize}
-		\item{Janus vs rFun}
-		\item{LOC metrics}
+		\item{LOC when implementing a certain algorithm}
+		\item{The amount of language constructs and abstractions at a programmer's disposal when solving problems}
+        \item{The ability to use patterns/constructs that are generally considered as idiomatic or elegant within the programming community}
 	\end{itemize}
+Admittedly, most of the above comes down to opinion. We think that it is useful to think about these aspects when considering our results nonetheless. 
 	
-	\subsection{Formal verification}
-	\begin{itemize}
-		\item{Reversibility}
-		\item{Verifying pre/post-conditions}
-		\item{r-Turing Completeness}
-	\end{itemize}
+\subsection{Formal verification}
+To our knowledge, there is no formally verified interpreter for Janus. The most interesting propositions to prove about an implementation of Janus are the following:
+\begin{itemize}
+	\item r-Turing completeness
+	\item Automated verification of conditional and loop assertions
+	\item Reversibility of Janus programs
+\end{itemize}
+We aim on formally verifying the reversibility of Janus programs, because it appears to be the most feasible option, while being as meaningful as the rest.
 
 \section{Methodology}
+\subsection{Template Haskell}
+\label{subsec:template-haskell}
+In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH) and \textit{QuasiQuotation} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
+
+Our main focus will be on static checking, as we are not planning to generate low-level efficient code for running our Janus programs. Nonetheless, we plan on using compile-time code generation to automatically derive the inverse of each declared Janus function and we expect this to give significant performance gains, since at the evaluation of an \textbf{uncall} statement, we will bypass the elaborate procedure of reversing the given function, whose computation time depends on its size.
+
+On the static checking side of things, TH will allow us to perform the following at compile-time:
 \begin{itemize}
-	\item{Template Haskell \footnote{\url{https://wiki.haskell.org/Template_Haskell}}}
-	\begin{itemize}
-		\item{Embedding Janus}
-		\item{Compile-time guarantees}
-		\begin{itemize}
-			\item{Type-checking}
-			\item{Variable usage}
-		\end{itemize}
-		
-	\end{itemize}
-	
-	\item{GHC Profiling}
-	\begin{itemize}
-		\item{Criterion package \footnote{\url{http://hackage.haskell.org/package/criterion})}}
-	\end{itemize}
-	
-	\item{Liquid Haskell \footnote{\url{https://ucsd-progsys.github.io/liquidhaskell-blog/})}}
-	\begin{itemize}
-		\item{Theorem proving}
-	\end{itemize}
+	\item{Parsing}
+	\item{Checking programs are well-typed}
+	\item{Proper variable usage}
+	\item{Embedding of Haskell expressions}
 \end{itemize}
 
-\section{Planning}
+Specifically, Janus programs will be written as \textit{quasi-quote} strings inside a Haskell source file, which will eventually transfer control to a \textit{quasi quoter}, that will parse and statically check desired properties of the given program, as well as compile the domain-specific syntax to Haskell code.
 
+For instance, Janus statements of the form \textbf{id} $\langle\textsc{reversibleOp}\rangle$ \textbf{expr} require that the identifier on the left-hand side does not occur in the expression on the right-hand side. This is easily achieved in TH via the process of \textit{reification}, which allows us to query compile-time information (e.g. a variable's type and identifier) while running our meta-programs.
+
+In addition to compile-time guarantees, the embedded Janus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
+	
+\subsection{Benchmarking}
+	\begin{itemize}
+		\item{GHC Profiling}
+		\item{Criterion package\site{http://hackage.haskell.org/package/criterion}}
+	\end{itemize}
+
+\subsection{Formal Verification}
+In order to verify the reversibility of Janus programs, we will use \textit{LiquidHaskell}, which extends Haskell with refinement types (i.e. types accompanied by logical predicates that enforce certain properties). \textit{LiquidHaskell} will enable us to write Haskell functions, which will act as equation proofs of the reversibility of all possible Janus programs.
+
+Mechanically checking the above statement can be achieved by performing structural induction on the syntax of our DSL. Technically, this proof will correspond to a Haskell function, which will perform recursion on the data types of our AST, via the process of \textit{refinement reflection} (i.e. reflecting the code of a function in its output type).
+
+\subsection{Risk and contingency plans}
+There are a number of risks to consider when creating a DSL, which are specified below with their respective contingency plans.
+\begin{itemize}
+\item \textbf{Arbitrary types} The plan is to implement arbitrary types in the DSL. It is expected that implementing arbitrary types will take a long time and therefore, the risk exists that the implementation can not be completed in the given timespan. The contingency plan, if this goal takes too much time, is to reduce arbitrary types to some special types.
+\item \textbf{Full verification} The goal is to completely verify the implementation of the DSL. To our knowledge, there is, to our knowledge, no verified implementation of a reversible language. Therefore, we are aiming at providing a fully verified implementation. If this full verification is not possible, the contingency plan is to at least verify the basic, non-extended version of Janus. 
+\item \textbf{Impossible applications} It is a possibility that the applications that will be implemented in the DSL are impossible to implement in a reversible language. If there is an application where there is no suitable variant found that can be implemented in a reversible language, that specific application will be ignored or a suitable replacement will be looked for. 
+\item \textbf{Impossible use of libraries} There is the risk that one of the proposed libraries we plan to use to implement the DSL turns out not to be suitable. This may be the case because the library lacks some features that are necessary for the implementation of the DSL. If this is the case, a replacement will be looked for. If no suitable replacement can be found, the functionality will either be implemented in another way without the use of a library or will be removed from the specification.
+\end{itemize} 
+
+\subsection{Goal}
+
+\section{Planning}
 \setlength{\tabcolsep}{20pt}
 \renewcommand{\arraystretch}{1.6}
 \begin{center}
@@ -120,4 +180,9 @@
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Project Submission}}
 \end{tabular}
 \end{center}
+\newpage
+
+\bibliographystyle{ieeetr}
+\bibliography{sources}
+
 \end{document}
