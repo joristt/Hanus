@@ -5,6 +5,7 @@
 % Tables
 \usepackage{multicol}
 \usepackage{multirow}
+\usepackage{csquotes}
 
 % Colors
 \usepackage{xcolor, color, colortbl}
@@ -42,6 +43,20 @@ Other examples of proposed reversible programming languages include the function
 
 \section{Problem}
 	\subsection{Experiment}
+	The main research question that we want to be able to answer when we have conducted our experiment is:
+	
+	\begin{displayquote}
+	\textit{can we improve the usability of Janus by implementing it as a DSL embedded in haskell?}
+	\end{displayquote}
+	
+	\noindent In order to be able to answer this question, we will attempt to improve Janus in multiple ways:
+	\begin{itemize}
+		\item making it possible to put most Haskell expressions on the right hand side of a Janus statement. See section \ref{subsec:template-haskell} for an explanation on why not every possible Haskell expression is allowed.
+		\item Adding extra operators to Janus.
+		\item Verification of our Janus implementation using Liquid Haskell\ref{liquidhaskell}.
+		\item Extending Janus with arbitrary types, meaning that a user should be able to define a type, define operators that work on that type, define what the operators do and lastly, define what the inverse of every operator is.
+	\end{itemize}
+	Several Janus applications will be implemented and tested using our own Janus DSL and existing solutions, and the performances of the implementations will be measured and compared, for example by measuring execution time of the programs, memory usage and the number of lines of code every Janus implementation needs for the different applications that we will implement. The performance will also be measured in ways that are not trivially quantifiable, for example by looking at the expressiveness of the different Janus implementations.
 	
 	\subsection{Janus}
 	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement \code{x += f} where \code{f} is any valid Haskell expression. As long as \code{f} does not depend on \code{x}, the statement can be inverted by the statement \code{x -= f}.
@@ -84,6 +99,7 @@ We aim on formally verifying the reversibility of Janus programs, because it app
 
 \section{Methodology}
 \subsection{Template Haskell}
+\label{subsec:template-haskell}
 In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH) and \textit{QuasiQuotation} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
 
 Our main focus will be on static checking, as we are not planning to generate low-level efficient code for running our Janus programs. Nonetheless, we plan on using compile-time code generation to automatically derive the inverse of each declared Janus function and we expect this to give significant performance gains, since at the evaluation of an \textbf{uncall} statement, we will bypass the elaborate procedure of reversing the given function, whose computation time depends on its size.
