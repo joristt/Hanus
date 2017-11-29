@@ -1,5 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 
+\usepackage{minted}
+
 % Tables
 \usepackage{multicol}
 \usepackage{multirow}
@@ -20,22 +22,29 @@
 
 % Macros
 \newcommand{\site}[1]{\footnote{\url{#1}}}
+\newcommand{\code}[1]{\mintinline{bash}{#1}}
 
 \begin{document}
 \maketitle
 
 \section{Background}
-\begin{itemize}
-	\item{Reversible Computation}
-	\item{other languages}
-	\item{a bit of theory}
-\end{itemize}
+\subsection{Logical and Physical Reversibility}
+	The notion of reversible computations can generally be broken down in two main categories: \textit{physical reversibility} and \textit{logical reversibility}. The former concerns the usage of physically reversible processes to carry out computations and has theoretical applications in the creation of more cost-efficient hardware\cite{frank05}. Logical reversibility is the study of computations that can be \textit{undone}, i.e. we can reconstruct the initial state of a computation solely from it's result and the computation itself. Reversible programming languages are part of the domain of logical reversibility. 
+\subsection{Computational Expressiveness}
+Reversible Turing machines can be used to define the computational expressiveness of programs written in reversible languages. They differ from regular deterministic Turing machines in that they are not only forward deterministic, but also backward deterministic. See \cite{axelsen11} for the exact definition of reversible Turing machines. (Reversible) programming languages that are able to simulate any reversible Turing machine are said to be r-Turing complete.
+
+This means that, when we think about reversible programming languages on a more abstract level, any function describing an atomic transition within the program's state space has to be injective. This imposes some practical limitations on the design of reversible programming languages. Multiplication and assignment are examples that are found in most programming languages and are non-injective, meaning that they cannot be incorporated into reversible programming languages in the same way as in regular programming languages.  
+
+\subsection{Reversible Programming Languages}
+Notable attempts at designing reversible programming languages include the language \textit{Janus}\cite{lutz82}. An example of how Janus deals with the previously described limitations is that it only allows combined assignment and modification of variables with the \code{+=}, \code{-=} and \code{^=} operators. The result is a language that quite nicely demonstrates the concept of reversible programming languages, but is simultaneously fairly unpractical due to it's reversible nature. The semantics of Janus were later formalized by Yokoyama\cite{yokoyama10}.
+
+Other examples of proposed reversible programming languages include the functional language RFUN \cite{yokoyama11}\cite{thomsen15}, Inv\cite{hu04}, Arrow\cite{rose15} and the object oriented language Joule\cite{schultz16}.
 
 \section{Problem}
 	\subsection{Experiment}
 	
 	\subsection{Janus}
-	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{r:lutz-derby1982} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement $x += f$ where $f$ is any valid Haskell expression. As long as $f$ does not depend on $x$, the statement can be inverted by the statement $x -= f$.
+	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement \code{x += f} where \code{f} is any valid Haskell expression. As long as \code{f} does not depend on \code{x}, the statement can be inverted by the statement \code{x -= f}.
 	
 	\subsection{Extensions}
 	\begin{itemize}
@@ -116,7 +125,6 @@ There are a number of risks to consider when creating a DSL, which are specified
 \subsection{Goal}
 
 \section{Planning}
-
 \setlength{\tabcolsep}{20pt}
 \renewcommand{\arraystretch}{1.6}
 \begin{center}
@@ -143,4 +151,9 @@ There are a number of risks to consider when creating a DSL, which are specified
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Project Submission}}
 \end{tabular}
 \end{center}
+\newpage
+
+\bibliographystyle{ieeetr}
+\bibliography{sources}
+
 \end{document}
