@@ -18,6 +18,9 @@
 \author{\small{Joris ten Tusscher, Joris Burgers, Ivo-Gabe de Wolff, Cas van der Rest, Orestis Melkonian}}
 \date{}
 
+% Macros
+\newcommand{\site}[1]{\footnote{\url{#1}}}
+
 \begin{document}
 \maketitle
 
@@ -61,14 +64,46 @@
 	\end{itemize}
 Admittedly, most of the above comes down to opinion. We think that it is useful to think about these aspects when considering our results nonetheless. 
 	
-	\subsection{Formal verification}
-	\begin{itemize}
-		\item{Reversibility}
-		\item{Verifying pre/post-conditions}
-		\item{r-Turing Completeness}
-	\end{itemize}
+\subsection{Formal verification}
+To our knowledge, there is no formally verified interpreter for Janus. The most interesting propositions to prove about an implementation of Janus are the following:
+\begin{itemize}
+	\item r-Turing completeness
+	\item Automated verification of conditional and loop assertions
+	\item Reversibility of Janus programs
+\end{itemize}
+We aim on formally verifying the reversibility of Janus programs, because it appears to be the most feasible option, while being as meaningful as the rest.
 
 \section{Methodology}
+\subsection{Template Haskell}
+In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH) and \textit{QuasiQuotation} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
+
+Our main focus will be on static checking, as we are not planning to generate low-level efficient code for running our Janus programs. Nonetheless, we plan on using compile-time code generation to automatically derive the inverse of each declared Janus function and we expect this to give significant performance gains, since at the evaluation of an \textbf{uncall} statement, we will bypass the elaborate procedure of reversing the given function, whose computation time depends on its size.
+
+On the static checking side of things, TH will allow us to perform the following at compile-time:
+\begin{itemize}
+	\item{Parsing}
+	\item{Checking programs are well-typed}
+	\item{Proper variable usage}
+	\item{Embedding of Haskell expressions}
+\end{itemize}
+
+Specifically, Janus programs will be written as \textit{quasi-quote} strings inside a Haskell source file, which will eventually transfer control to a \textit{quasi quoter}, that will parse and statically check desired properties of the given program, as well as compile the domain-specific syntax to Haskell code.
+
+For instance, Janus statements of the form \textbf{id} $\langle\textsc{reversibleOp}\rangle$ \textbf{expr} require that the identifier on the left-hand side does not occur in the expression on the right-hand side. This is easily achieved in TH via the process of \textit{reification}, which allows us to query compile-time information (e.g. a variable's type and identifier) while running our meta-programs.
+
+In addition to compile-time guarantees, the embedded Janus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
+	
+\subsection{Benchmarking}
+	\begin{itemize}
+		\item{GHC Profiling}
+		\item{Criterion package\site{http://hackage.haskell.org/package/criterion}}
+	\end{itemize}
+
+\subsection{Formal Verification}
+In order to verify the reversibility of Janus programs, we will use \textit{LiquidHaskell}, which extends Haskell with refinement types (i.e. types accompanied by logical predicates that enforce certain properties). \textit{LiquidHaskell} will enable us to write Haskell functions, which will act as equation proofs of the reversibility of all possible Janus programs.
+
+Mechanically checking the above statement can be achieved by performing structural induction on the syntax of our DSL. Technically, this proof will correspond to a Haskell function, which will perform recursion on the data types of our AST, via the process of \textit{refinement reflection} (i.e. reflecting the code of a function in its output type).
+
 \subsection{Risk and contingency plans}
 There are a number of risks to consider when creating a DSL, which are specified below with their respective contingency plans.
 \begin{itemize}
@@ -78,29 +113,7 @@ There are a number of risks to consider when creating a DSL, which are specified
 \item \textbf{Impossible use of libraries} There is the risk that one of the proposed libraries we plan to use to implement the DSL turns out not to be suitable. This may be the case because the library lacks some features that are necessary for the implementation of the DSL. If this is the case, a replacement will be looked for. If no suitable replacement can be found, the functionality will either be implemented in another way without the use of a library or will be removed from the specification.
 \end{itemize} 
 
-
-\begin{itemize}
-	\item{Template Haskell \footnote{\url{https://wiki.haskell.org/Template_Haskell}}}
-	\begin{itemize}
-		\item{Embedding Janus}
-		\item{Compile-time guarantees}
-		\begin{itemize}
-			\item{Type-checking}
-			\item{Variable usage}
-		\end{itemize}
-		
-	\end{itemize}
-	
-	\item{GHC Profiling}
-	\begin{itemize}
-		\item{Criterion package \footnote{\url{http://hackage.haskell.org/package/criterion})}}
-	\end{itemize}
-	
-	\item{Liquid Haskell \footnote{\url{https://ucsd-progsys.github.io/liquidhaskell-blog/})}}
-	\begin{itemize}
-		\item{Theorem proving}
-	\end{itemize}
-\end{itemize}
+\subsection{Goal}
 
 \section{Planning}
 
