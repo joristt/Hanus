@@ -1,5 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 
+\usepackage{minted}
+
 % Tables
 \usepackage{multicol}
 \usepackage{multirow}
@@ -20,6 +22,7 @@
 
 % Macros
 \newcommand{\site}[1]{\footnote{\url{#1}}}
+\newcommand{\code}[1]{\mintinline{bash}{#1}}
 
 \begin{document}
 \maketitle
@@ -32,14 +35,14 @@ Reversible Turing machines can be used to define the computational expressivenes
 This means that, when we think about reversible programming languages on a more abstract level, any function describing an atomic transition within the program's state space has to be injective. This imposes some practical limitations on the design of reversible programming languages. Multiplication and assignment are examples that are found in most programming languages and are non-injective, meaning that they cannot be incorporated into reversible programming languages in the same way as in regular programming languages.  
 
 \subsection{Reversible Programming Languages}
-Notable attempts at designing reversible programming languages include the language \textit{Janus}\cite{lutz82}. An example of how Janus deals with the previously described limitations is that it only allows combined assignment and modification of variables with the +=, -= and $^\land$= operators. The result is a language that quite nicely demonstrates the concept of reversible programming languages, but is simultaneously fairly unpractical due to it's reversible nature. The semantics of Janus were later formalized by Yokoyama\cite{yokoyama10} \\ \\
-Other examples of proposed reversible programming languages include the functional language RFUN \cite{yokoyama11}\cite{thomsen15}, Inv\cite{hu04}, Arrow\cite{rose15} and the object oriented language Joule\cite{shultz16}.
+Notable attempts at designing reversible programming languages include the language \textit{Janus}\cite{lutz82}. An example of how Janus deals with the previously described limitations is that it only allows combined assignment and modification of variables with the \code{+=}, \code{-=} and \code{^=} operators. The result is a language that quite nicely demonstrates the concept of reversible programming languages, but is simultaneously fairly unpractical due to it's reversible nature. The semantics of Janus were later formalized by Yokoyama\cite{yokoyama10} \\ \\
+Other examples of proposed reversible programming languages include the functional language RFUN \cite{yokoyama11}\cite{thomsen15}, Inv\cite{hu04}, Arrow\cite{rose15} and the object oriented language Joule\cite{schultz16}.
 
 \section{Problem}
 	\subsection{Experiment}
 	
 	\subsection{Janus}
-	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{r:lutz-derby1982} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement $x += f$ where $f$ is any valid Haskell expression. As long as $f$ does not depend on $x$, the statement can be inverted by the statement $x -= f$.
+	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement \code{x += f} where \code{f} is any valid Haskell expression. As long as \code{f} does not depend on \code{x}, the statement can be inverted by the statement \code{x -= f}.
 	
 	\subsection{Extensions}
 	\begin{itemize}
@@ -120,42 +123,6 @@ There are a number of risks to consider when creating a DSL, which are specified
 \subsection{Goal}
 
 \section{Planning}
-\begin{itemize}
-	\item{Milestones}
-	\item{Division of labour}
-\end{itemize}
-\newpage
-\begin{thebibliography}{99}
-\bibitem{frank05}
-Frank, M. P. (2005, May). Introduction to reversible computing: motivation, progress, and challenges. In Proceedings of the 2nd Conference on Computing Frontiers (pp. 385-390). ACM.
-
-\bibitem{axelsen11}
-Axelsen, H. B., \& Gl{\"u}ck, R. (2011, March). What do reversible programs compute? 
-In FoSSaCS (pp. 42-56).
-
-\bibitem{lutz82}
-Lutz, C., \& Derby, H. (1982). Janus: a time-reversible language. Caltech class project.
-
-\bibitem{yokoyama11}
-Yokoyama, T., Axelsen, H. B., \& Glück, R. (2011). Towards a Reversible Functional Language. RC, 7165, 14-29.
-
-\bibitem{thomsen15}
-Thomsen, M. K., \& Axelsen, H. B. (2015, September). Interpretation and programming of the reversible functional language RFUN. In Proceedings of the 27th Symposium on the Implementation and Application of Functional Programming Languages (p. 8). ACM.
-
-\bibitem{hu04}
-Mu, S. C., Hu, Z., \& Takeichi, M. (2004, July). An injective language for reversible computation. In MPC (pp. 289-313).
-
-\bibitem{rose15}
-Rose, E. (2015). Arrow: A Modern Reversible Programming Language (Doctoral dissertation, Oberlin College).
-
-\bibitem{shultz16}
-Schultz, U. P., \& Axelsen, H. B. (2016, July). Elements of a Reversible Object-Oriented Language. In International Conference on Reversible Computation (pp. 153-159). Springer International Publishing.
-
-\bibitem{yokoyama10}
-Yokoyama, T. (2010). Reversible computation and reversible programming languages. Electronic Notes in Theoretical Computer Science, 253(6), 71-81.
-
-\end{thebibliography}
-
 \setlength{\tabcolsep}{20pt}
 \renewcommand{\arraystretch}{1.6}
 \begin{center}
@@ -183,34 +150,8 @@ Yokoyama, T. (2010). Reversible computation and reversible programming languages
 \end{tabular}
 \end{center}
 \newpage
-\begin{thebibliography}{99}
-\bibitem{frank05}
-Frank, M. P. (2005, May). Introduction to reversible computing: motivation, progress, and challenges. In Proceedings of the 2nd Conference on Computing Frontiers (pp. 385-390). ACM.
 
-\bibitem{axelsen11}
-Axelsen, H. B., \& Gl{\"u}ck, R. (2011, March). What do reversible programs compute? 
-In FoSSaCS (pp. 42-56).
+\bibliographystyle{ieeetr}
+\bibliography{sources}
 
-\bibitem{lutz82}
-Lutz, C., \& Derby, H. (1982). Janus: a time-reversible language. Caltech class project.
-
-\bibitem{yokoyama11}
-Yokoyama, T., Axelsen, H. B., \& Glück, R. (2011). Towards a Reversible Functional Language. RC, 7165, 14-29.
-
-\bibitem{thomsen15}
-Thomsen, M. K., \& Axelsen, H. B. (2015, September). Interpretation and programming of the reversible functional language RFUN. In Proceedings of the 27th Symposium on the Implementation and Application of Functional Programming Languages (p. 8). ACM.
-
-\bibitem{hu04}
-Mu, S. C., Hu, Z., \& Takeichi, M. (2004, July). An injective language for reversible computation. In MPC (pp. 289-313).
-
-\bibitem{rose15}
-Rose, E. (2015). Arrow: A Modern Reversible Programming Language (Doctoral dissertation, Oberlin College).
-
-\bibitem{shultz16}
-Schultz, U. P., \& Axelsen, H. B. (2016, July). Elements of a Reversible Object-Oriented Language. In International Conference on Reversible Computation (pp. 153-159). Springer International Publishing.
-
-\bibitem{yokoyama10}
-Yokoyama, T. (2010). Reversible computation and reversible programming languages. Electronic Notes in Theoretical Computer Science, 253(6), 71-81.
-
-\end{thebibliography}
 \end{document}
