@@ -63,6 +63,16 @@
 	\end{itemize}
 
 \section{Methodology}
+\subsection{Risk and contingency plans}
+There are a number of risks to consider when creating a DSL, which are specified below with their respective contingency plans.
+\begin{itemize}
+\item \textbf{Arbitrary types} The plan is to implement arbitrary types in the DSL. It is expected that implementing arbitrary types will take a long time and therefore, the risk exists that the implementation can not be completed in the given timespan. The contingency plan, if this goal takes too much time, is to reduce arbitrary types to some special types.
+\item \textbf{Full verification} The goal is to completely verify the implementation of the DSL. To our knowledge, there is, to our knowledge, no verified implementation of a reversible language. Therefore, we are aiming at providing a fully verified implementation. If this full verification is not possible, the contingency plan is to at least verify the basic, non-extended version of Janus. 
+\item \textbf{Impossible applications} It is a possibility that the applications that will be implemented in the DSL are impossible to implement in a reversible language. If there is an application where there is no suitable variant found that can be implemented in a reversible language, that specific application will be ignored or a suitable replacement will be looked for. 
+\item \textbf{Impossible use of libraries} There is the risk that one of the proposed libraries we plan to use to implement the DSL turns out not to be suitable. This may be the case because the library lacks some features that are necessary for the implementation of the DSL. If this is the case, a replacement will be looked for. If no suitable replacement can be found, the functionality will either be implemented in another way without the use of a library or will be removed from the specification.
+\end{itemize} 
+
+
 \begin{itemize}
 	\item{Template Haskell \footnote{\url{https://wiki.haskell.org/Template_Haskell}}}
 	\begin{itemize}
