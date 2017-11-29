@@ -141,9 +141,12 @@ There are a number of risks to consider when creating a DSL, which are specified
 \item \textbf{Full verification} The goal is to completely verify the implementation of the DSL. To our knowledge, there is, to our knowledge, no verified implementation of a reversible language. Therefore, we are aiming at providing a fully verified implementation. If this full verification is not possible, the contingency plan is to at least verify the basic, non-extended version of Janus. 
 \item \textbf{Impossible applications} It is a possibility that the applications that will be implemented in the DSL are impossible to implement in a reversible language. If there is an application where there is no suitable variant found that can be implemented in a reversible language, that specific application will be ignored or a suitable replacement will be looked for. 
 \item \textbf{Impossible use of libraries} There is the risk that one of the proposed libraries we plan to use to implement the DSL turns out not to be suitable. This may be the case because the library lacks some features that are necessary for the implementation of the DSL. If this is the case, a replacement will be looked for. If no suitable replacement can be found, the functionality will either be implemented in another way without the use of a library or will be removed from the specification.
-\end{itemize} 
+\end{itemize}
 
-\subsection{Goal}
+\subsection{Expected outcome}
+At the end of the project, we expect to have a working Janus DSL, that supports all features from the initial Janus version \cite{lutz82}. We expect to have implemented local variables and function arguments from the extended Janus version \cite{yokoyama10} and we hope to have support for arbitrary types. If we cannot implement the latter, we do not consider the project to be failed, but this makes the DSL less usable. Furthermore, the implementation should have compile-time guarantees on the reversibility of programs.
+
+To demonstrate the usability of our DSL, we compare various applications in the original version of Janus with programs written using our embedded DSL. We will compare these examples by benchmarking and the readability or style of the code. Given that our DSL can make use of the power of Haskell, we assume that programs in our DSL will be shorter and more readable. It is hard to estimate the performance of our implementation, as this depends on how well the Haskell compiler (GHC) can optimize programs written in our DSL. However, the existing interpreters for Janus do not seem to focus on optimizing performance, so the bar for our implementation is low.
 
 \section{Planning}
 \setlength{\tabcolsep}{20pt}
