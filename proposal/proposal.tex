@@ -62,12 +62,20 @@ Other examples of proposed reversible programming languages include the function
 	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement \code{x += f} where \code{f} is any valid Haskell expression. As long as \code{f} does not depend on \code{x}, the statement can be inverted by the statement \code{x -= f}.
 	
 	\subsection{Extensions}
-	\begin{itemize}
-		\item{Data structures (trees/sets/maps/ADTs)}
-		\item{Prelude}
-		\item{Syntactic sugar}
-	\end{itemize}
+	We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
 	
+	\subsubsection{Local variables and parameters}
+	The first addition is the possibility to declare local variables. In the original version of Janus\cite{lutz82}, all variables were global. The extension of Janus by Yokoyama\cite{yokoyama10} included local variables. Those variables need to be declared before use with an initial value (\texttt{local int n = 0}) and, when they go out of scope, with a final value (\texttt{delocal int n = 42}). This final value is used as an assertion if the program is executed in the natural direction, and used as an initial value if the program is reversed.
+	
+	Local variables can also be used to desugar program calls with parameters. In the initial version of Janus\cite{lutz82}, no parameters were supported as all variables were global. When local variables are supported, parameters can be easily added.
+	
+	\subsubsection{Multiple or arbitrary types}
+	We would like to add support for different types. When we start, all variables should be typed as integers. Janus also supports stacks and arrays of integers, which we could add to our DSL.
+	
+	For more usability, we could add support for arbitrary types. A user could then easily use a certain type in our DSL by providing some elementary reversible operations such as \texttt{+=} and \texttt{-=} for numbers.
+	
+	Usability can also be increased by adding more reversible operators such as XOR.
+
 	\subsection{Applications}
 	Although a programmer will not always benefit from implementing a program in a reversible language, for example because the programmer has no interest in ever running the inverse of the program in the first place, he or she sometimes might. A few applications that bring benefits to the table when they are implemented in a time-reversible language will be implemented in Janus as part of this project:
 	\begin{itemize}
