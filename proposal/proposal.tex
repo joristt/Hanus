@@ -65,16 +65,16 @@ Other examples of proposed reversible programming languages include the function
 	We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
 	
 	\subsubsection{Local variables and parameters}
-	The first addition is the possibility to declare local variables. In the original version of Janus, all variables were global. The version of (??? reference paper ???) included local variables. Those variables need to be declared before use with an initial value (\texttt{local int n = 0}) and, when they go out of scope, with a final value (\texttt{delocal int n = 42}). This final value is used as an assertion if the program is executed in the natural direction, and used as an initial value if the program is reversed.
+	The first addition is the possibility to declare local variables. In the original version of Janus\cite{lutz82}, all variables were global. The extension of Janus by Yokoyama\cite{yokoyama10} included local variables. Those variables need to be declared before use with an initial value (\texttt{local int n = 0}) and, when they go out of scope, with a final value (\texttt{delocal int n = 42}). This final value is used as an assertion if the program is executed in the natural direction, and used as an initial value if the program is reversed.
 	
-	Local variables can also be used to desugar program calls with parameters. In the initial version of Janus, no parameters were supported as all variables were global. When local variables are supported, parameters can be easily added.
+	Local variables can also be used to desugar program calls with parameters. In the initial version of Janus\cite{lutz82}, no parameters were supported as all variables were global. When local variables are supported, parameters can be easily added.
 	
 	\subsubsection{Multiple or arbitrary types}
 	We would like to add support for different types. When we start, all variables should be typed as integers. Janus also supports stacks and arrays of integers, which we could add to our DSL.
 	
 	For more usability, we could add support for arbitrary types. A user could then easily use a certain type in our DSL by providing some elementary reversible operations such as \texttt{+=} and \texttt{-=} for numbers.
 	
-	Usability can also be increased by adding more reversible operations such as XOR.
+	Usability can also be increased by adding more reversible operators such as XOR.
 
 	\subsection{Applications}
 	Although a programmer will not always benefit from implementing a program in a reversible language, for example because the programmer has no interest in ever running the inverse of the program in the first place, he or she sometimes might. A few applications that bring benefits to the table when they are implemented in a time-reversible language will be implemented in Janus as part of this project:
