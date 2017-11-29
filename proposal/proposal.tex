@@ -69,11 +69,16 @@ Other examples of proposed reversible programming languages include the function
 	\end{itemize}
 	
 	\subsection{Applications}
+	Although a programmer will not always benefit from implementing a program in a reversible language, for example because the programmer has no interest in ever running the inverse of the program in the first place, he or she sometimes might. A few applications that bring benefits to the table when they are implemented in a time-reversible language will be implemented in Janus as part of this project:
 	\begin{itemize}
-		\item{Path finding algorithms}
-        \item{Encoding-Decoding}
-        \item{Low-level bit manipulation (hamming error correction)}
-        \item{[Optional] Reversible Debugger}
+		\item
+			a pathfinding algorithm such as BFS or DFS, where you can also automatically backtrack;
+	        \item
+	        		a simple encoding or symmetric encryption algorithm, which can also be decoded or decrypted using the inverse function;
+	        	\item
+			the Hamming(7,4) function, which takes 4 bits as input and returns the four input bits plus three parity bits that can be used to correct an incorrect bit\cite{hamming1950error}. The inverse if Hamming(7,4) can, given the 7 bits, return the 4 original input bits, assuming that at most 1 of the 7 bits is incorrect.
+        		\item
+			If there is sufficient time: a debugger in which one can go back in time, i.e. reverse already executed statements. This will likely be much more difficult to implement than the other applications mentioned above, so it will only be implemented if there is sufficient time.
 	\end{itemize}
 	
 	\subsection{Comparison with Existing Implementations}
