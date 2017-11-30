@@ -46,14 +46,14 @@ Other examples of proposed reversible programming languages include the function
 	The main research question that we want to be able to answer when we have conducted our experiment is:
 	
 	\begin{displayquote}
-	\textit{can we improve the usability of Janus by implementing it as a DSL embedded in haskell?}
+	\textit{can we improve the usability of Janus by implementing it as a DSL embedded in Haskell?}
 	\end{displayquote}
 	
 	\noindent In order to be able to answer this question, we will attempt to improve Janus in multiple ways:
 	\begin{itemize}
 		\item making it possible to put most Haskell expressions on the right hand side of a Janus statement. See section \ref{subsec:template-haskell} for an explanation on why not every possible Haskell expression is allowed.
 		\item Adding extra operators to Janus.
-		\item Verification of our Janus implementation using Liquid Haskell\ref{liquidhaskell}.
+		\item Verification of our Janus implementation using Liquid Haskell (section \ref{subsec:liquid-haskell}).
 		\item Extending Janus with arbitrary types, meaning that a user should be able to define a type, define operators that work on that type, define what the operators do and lastly, define what the inverse of every operator is.
 	\end{itemize}
 	Several Janus applications will be implemented and tested using our own Janus DSL and existing solutions, and the performances of the implementations will be measured and compared, for example by measuring execution time of the programs, memory usage and the number of lines of code every Janus implementation needs for the different applications that we will implement. The performance will also be measured in ways that are not trivially quantifiable, for example by looking at the expressiveness of the different Janus implementations.
@@ -111,7 +111,7 @@ To our knowledge, there is no formally verified interpreter for Janus. The most 
 We aim on formally verifying the reversibility of Janus programs, because it appears to be the most feasible option, while being as meaningful as the rest.
 
 \section{Methodology}
-\subsection{Template Haskell}
+\subsection{DSL Embedding}
 \label{subsec:template-haskell}
 In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH)\cite{sheard02} and \textit{QuasiQuotation}\cite{mainland07} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
 
@@ -132,6 +132,7 @@ For instance, Janus statements of the form \textbf{id} $\langle\textsc{reversibl
 In addition to compile-time guarantees, the embedded Janus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
 
 \subsection{Formal Verification}
+\label{subsec:liquid-haskell}
 In order to verify the reversibility of Janus programs, we will use \textit{LiquidHaskell}\cite{vazou16}, which extends Haskell with refinement types (i.e. types accompanied by logical predicates that enforce certain properties). \textit{LiquidHaskell} will enable us to write Haskell functions, which will act as equation proofs of the reversibility of all possible Janus programs.
 
 Mechanically checking the above statement can be achieved by performing structural induction on the syntax of our DSL. Technically, this proof will correspond to a Haskell function, which will perform recursion on the data types of our AST, via the process of \textit{refinement reflection} (i.e. reflecting the code of a function in its output type).
