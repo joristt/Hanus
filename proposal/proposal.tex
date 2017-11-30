@@ -113,7 +113,7 @@ We aim on formally verifying the reversibility of Janus programs, because it app
 \section{Methodology}
 \subsection{Template Haskell}
 \label{subsec:template-haskell}
-In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH) and \textit{QuasiQuotation} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
+In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH)\cite{sheard02} and \textit{QuasiQuotation}\cite{mainland07} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
 
 Our main focus will be on static checking, as we are not planning to generate low-level efficient code for running our Janus programs. Nonetheless, we plan on using compile-time code generation to automatically derive the inverse of each declared Janus function and we expect this to give significant performance gains, since at the evaluation of an \textbf{uncall} statement, we will bypass the elaborate procedure of reversing the given function, whose computation time depends on its size.
 
@@ -130,15 +130,9 @@ Specifically, Janus programs will be written as \textit{quasi-quote} strings ins
 For instance, Janus statements of the form \textbf{id} $\langle\textsc{reversibleOp}\rangle$ \textbf{expr} require that the identifier on the left-hand side does not occur in the expression on the right-hand side. This is easily achieved in TH via the process of \textit{reification}, which allows us to query compile-time information (e.g. a variable's type and identifier) while running our meta-programs.
 
 In addition to compile-time guarantees, the embedded Janus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
-	
-\subsection{Benchmarking}
-	\begin{itemize}
-		\item{GHC Profiling}
-		\item{Criterion package\site{http://hackage.haskell.org/package/criterion}}
-	\end{itemize}
 
 \subsection{Formal Verification}
-In order to verify the reversibility of Janus programs, we will use \textit{LiquidHaskell}, which extends Haskell with refinement types (i.e. types accompanied by logical predicates that enforce certain properties). \textit{LiquidHaskell} will enable us to write Haskell functions, which will act as equation proofs of the reversibility of all possible Janus programs.
+In order to verify the reversibility of Janus programs, we will use \textit{LiquidHaskell}\cite{vazou16}, which extends Haskell with refinement types (i.e. types accompanied by logical predicates that enforce certain properties). \textit{LiquidHaskell} will enable us to write Haskell functions, which will act as equation proofs of the reversibility of all possible Janus programs.
 
 Mechanically checking the above statement can be achieved by performing structural induction on the syntax of our DSL. Technically, this proof will correspond to a Haskell function, which will perform recursion on the data types of our AST, via the process of \textit{refinement reflection} (i.e. reflecting the code of a function in its output type).
 
