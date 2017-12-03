@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module StdLib where
+module StdLib.Operator where
 
 import Data.Bits
 
@@ -10,8 +10,6 @@ data ArrayIndexer a b c = ArrayIndexer (a -> b -> Maybe c) (a -> b -> c -> a)
 
 data FieldIndexer a b = FieldIndexer (a -> Maybe b) (a -> b -> a) 
 
-class Value a where
-    null :: a
 
 inverseOf :: Operator a b -> (a -> b -> a) -> Operator a b
 inverseOf (Operator f _) g = Operator g f
@@ -22,4 +20,3 @@ inverseOf (Operator f _) g = Operator g f
 
 (^=) :: (Bits a) => Operator a a
 (^=) = inverseOf (^=) (xor)
-

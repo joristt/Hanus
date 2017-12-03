@@ -18,9 +18,9 @@ data LHS = LHSIdentifier Identifier
 
 type Block = [Statement]
 
-data Statement  
+data Statement
   = Assignement String LHS Exp 
-  | Swap LHS LHS
+  | DoubleAssignment String LHS LHS
   | Call Identifier [LHS]
   | Uncall Identifier [LHS]
   | If Exp Block Block Exp
