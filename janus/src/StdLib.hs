@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module StdLib where
 
 import Data.Bits
