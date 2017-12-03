@@ -3,16 +3,17 @@ version:             0.1.0.0
 -- synopsis:
 description:         Janus DSL
 homepage:            https://github.com/joristt/Concepts-of-Program-Design-Practical
-author:              Joris ten Tusscher, Joris Burgers, Ivo-Gabe de Wolff, Cas van der Rest, Orestis Melkonian
+author:              Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, Orestis Melkonian
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Lib, AST, StdLib
   build-depends:       base >= 4.7 && < 5
                      , optparse-applicative
+  extensions:          TemplateHaskell
   default-language:    Haskell2010
 
 executable janus
