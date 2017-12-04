@@ -30,9 +30,9 @@ data Statement
 Examples:
 
 x += expr
-Assignment "+=" (LHSIdentifier x) (expr)
+Assignment "+=" (LHSIdentifier "x") (expr)
 
 swap x y 
 (syntactic sugar for (x, y) `swap` ())
-Assignment "swap" (LHSIdentifier x, LHSIdentifier y) ()
+Assignment "swap" (LHSIdentifier "x", LHSIdentifier "y") ()
 -}
