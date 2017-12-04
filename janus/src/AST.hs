@@ -20,9 +20,19 @@ type Block = [Statement]
 
 data Statement
   = Assignement String LHS Exp 
-  | DoubleAssignment String LHS LHS
   | Call Identifier [LHS]
   | Uncall Identifier [LHS]
   | If Exp Block Block Exp
   | LoopUntil Exp Block Block Exp
   | LocalVarDeclaration Variable Exp Block Exp
+
+{-
+Examples:
+
+x += expr
+Assignment "+=" (LHSIdentifier x) (expr)
+
+swap x y 
+(syntactic sugar for (x, y) `swap` ())
+Assignment "swap" (LHSIdentifier x, LHSIdentifier y) ()
+-}
