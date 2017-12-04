@@ -1,9 +1,13 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
 
-import Lib
+import Arith.AST
+import Arith.QQ (arith, arithF)
+import Arith.Eval (eval)
 
 -- | Command-line options.
 data Options = Options
@@ -37,5 +41,11 @@ main = run =<< execParser (parseOptions `withInfo` "Janus DSL")
 
 -- | Run.
 run :: Options -> IO ()
-run (Options inputFile dummyInt) = do
-  putStrLn someFunc
+run (Options inputFile dummyInt) =
+  print $ eval [arith|
+    0 +
+    ((2 + 3) +
+    (1 + (1 + 1)) + `calcNum 7`)
+  |]
+  where
+    calcNum = (+ sum [1..5]) :: Integer -> Integer
