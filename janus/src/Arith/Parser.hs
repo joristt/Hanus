@@ -9,11 +9,14 @@ import Text.Parsec.Expr (buildExpressionParser, Operator (Infix), Assoc (AssocLe
 import Text.Parsec.Language (haskell)
 import qualified Text.Parsec.Token as Tokens
 
+import Language.Haskell.TH (Exp)
+import Language.Haskell.Meta (parseExp)
+
 import Arith.AST
 
 -- | Run given parser with location information.
 -- (needed for displaying errors inside quasi-quotations)
-runParserWithLoc :: Monad m => (String, Int, Int) -> String -> m Expr
+runParserWithLoc :: Monad m => (String, Int, Int) -> String -> m Prog
 runParserWithLoc (file, line, col) s =
     case runParser p () "" s of
       Left err -> fail $ show err
@@ -24,20 +27,28 @@ runParserWithLoc (file, line, col) s =
             flip setSourceName file $
             flip setSourceLine line $
             setSourceColumn pos col
-           exprP <* eof
+           name <- nameP <~ ":"
+           e <- exprP <* eof
+           return $ Prog name e
 
 -- | Parser for arithmetic expressions.
 exprP :: Parser Expr
 exprP = buildExpressionParser [[infix_ "+" Add]] expr
   where expr = try (parens exprP) <|>
-               try ("`" ~> (MetaVar <$> metaVarP) <~ "`") <|>
+               try metaExpP <|>
                Lit <$> numP
 
 -- | Primitive parsers.
+nameP :: Parser String
+nameP = Tokens.identifier haskell
 numP :: Parser Integer
 numP = lexeme $ Tokens.integer haskell
-metaVarP :: Parser String
-metaVarP = many1 (noneOf ['`'])
+metaExpP :: Parser Expr
+metaExpP = do
+  s <- "`" ~> many1 (noneOf ['`']) <~ "`"
+  case parseExp s of
+    Left err -> fail $ "Not a valid Haskell expression: " ++ show err
+    Right e -> return $ MetaExp e
 
 -- | Useful macros.
 lexeme p = spaces *> p <* spaces

@@ -10,7 +10,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Arith.AST, Arith.Parser, Arith.QQ, Arith.Eval
+  exposed-modules:     Arith.AST, Arith.Parser, Arith.QQ
   build-depends:       base >= 4.7 && < 5
                      , optparse-applicative
                      , parsec >= 3.1
