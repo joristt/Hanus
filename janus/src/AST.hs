@@ -18,11 +18,27 @@ data LHS = LHSIdentifier Identifier
 type Block = [Statement]
 
 data Statement
-  = Assignement String LHS Exp 
+  -- x y s= exp
+  -- pop x y
+  = Assignement String [LHS] Exp 
+  -- call name x y
   | Call Identifier [LHS]
+  -- uncall name x y
   | Uncall Identifier [LHS]
+  -- if expr then
+  --   block
+  -- else
+  --   block
+  -- fi expr;
   | If Exp Block Block Exp
+  -- from expr
+  -- [ do block ]
+  -- [ loop block ]
+  -- until expr; 
   | LoopUntil Exp Block Block Exp
+  -- local x :: T = expr;
+  --   block
+  -- delocal x = expr;
   | LocalVarDeclaration Variable Exp Block Exp
 
 {-
