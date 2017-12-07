@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module AST where
 
 import Language.Haskell.TH.Syntax

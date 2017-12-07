@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module StdLib.Operator where
 
 import StdLib.DefaultValue
@@ -14,7 +13,7 @@ inverseOf (Operator f _) g = Operator g f
 (-=) = inverseOf (+=) (-)
 
 (^=) :: (Bits a) => Operator a a
-(^=) = inverseOf (^=) (xor)
+(^=) = inverseOf (^=) xor
 
 swap :: Operator (a, a) ()
 swap = inverseOf swap (\(x, y) () -> (y, x))
