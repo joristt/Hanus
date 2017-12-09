@@ -10,13 +10,14 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     AST, StdLib.ArrayIndexer, StdLib.DefaultValue, StdLib.FieldIndexer, StdLib.Operator
+  exposed-modules:     AST, StdLib.ArrayIndexer, StdLib.DefaultValue, StdLib.FieldIndexer, StdLib.Operator, Parser.JanusParser
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , optparse-applicative
                      , template-haskell
                      , uu-parsinglib
                      , haskell-src-meta
+                     , extra
   default-language:    Haskell2010
 
 executable janus
