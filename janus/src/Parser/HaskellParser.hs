@@ -9,7 +9,7 @@ import Text.ParserCombinators.UU.BasicInstances
 import Language.Haskell.Meta.Parse
 import Language.Haskell.TH.Syntax
 
-myTest = parse (pType [";"]) (createStr (LineColPos 0 0 0) "Maybe [a;")
+myTest = parse (pType [";"]) (createStr (LineColPos 0 0 0) "Maybe [a];")
 
 pType :: [String] -> Parser (Type, String)
 pType splits = pSplitUntilSuccess "" splits (eitherToMaybe . parseType . init)
