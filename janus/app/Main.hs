@@ -3,8 +3,6 @@ module Main where
 import Options.Applicative
 import Data.Semigroup ((<>))
 
-import Lib
-
 -- | Command-line options.
 data Options = Options
   { inputFile :: String
@@ -38,4 +36,4 @@ main = run =<< execParser (parseOptions `withInfo` "Janus DSL")
 -- | Run.
 run :: Options -> IO ()
 run (Options inputFile dummyInt) = do
-  putStrLn someFunc
+  putStrLn ""
