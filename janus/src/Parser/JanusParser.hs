@@ -96,16 +96,17 @@ pIf = If <$ pToken "if" <* pSpaces
         (return ([]))
 
 pLoop :: Parser Statement
-pLoop = do
-  pToken "loop"
-  pSpaces
-  (exp, sep) <- pExp ["do", "loop", "until"]
-  pSpaces
-  (doBlock, loopBlock, untilExp) <- (case sep of
-    "do" -> pLoopAfterDo
-    "loop" -> (\(b, e) -> ([], b, e)) <$> pLoopAfterLoop
-    "until" -> (\e -> ([], [], e)) <$> pLoopAfterUntil) :: Parser (Block, Block, Exp)
-  return $ LoopUntil exp doBlock loopBlock untilExp
+pLoop = addLength 10 (do
+    pToken "loop"
+    pSpaces
+    (exp, sep) <- pExp ["do", "loop", "until"]
+    pSpaces
+    (doBlock, loopBlock, untilExp) <- (case sep of
+        "do" -> pLoopAfterDo
+        "loop" -> (\(b, e) -> ([], b, e)) <$> pLoopAfterLoop
+        "until" -> (\e -> ([], [], e)) <$> pLoopAfterUntil) :: Parser (Block, Block, Exp)
+    return $ LoopUntil exp doBlock loopBlock untilExp
+    )
 
 pLoopAfterDo :: Parser (Block, Block, Exp)
 pLoopAfterDo = (\b1 (b2, e) -> (b1, b2, e)) <$ pSpaces <*> pBlock <* pSpaces <*> (

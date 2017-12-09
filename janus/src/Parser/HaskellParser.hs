@@ -18,11 +18,12 @@ pExp :: [String] -> Parser (Exp, String)
 pExp splits = pSplitUntilSuccess "" splits (eitherToMaybe . parseExp)
 
 pSplitUntilSuccess :: String -> [String] -> (String -> Maybe a) -> Parser (a, String)
-pSplitUntilSuccess prefix splits f = do
-  (str, sep) <- pUntil splits
-  case f (prefix ++ str) of
-    Just a  -> return (a, sep)
-    Nothing -> pSplitUntilSuccess (prefix ++ str ++ sep) splits f
+pSplitUntilSuccess prefix splits f = addLength 10 (do
+    (str, sep) <- pUntil splits
+    case f (prefix ++ str) of
+      Just a  -> return (a, sep)
+      Nothing -> pSplitUntilSuccess (prefix ++ str ++ sep) splits f
+  )
 
 pUntil :: [String] -> Parser (String, String)
 pUntil splits = pSplit <<|> (\x (y, z) -> (x : y, z)) <$> pRange (minBound, maxBound) <*> pUntil splits
