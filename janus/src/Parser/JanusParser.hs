@@ -31,22 +31,23 @@ spaces = pMunch (`elem` " \n")
 pGreedyChoice (x:xs) = x <<|> (pGreedyChoice xs)
 pGreedyChoice [] = pFail
 
-pProgram = Program [] <$ pList (pSpaces *> pDeclaration <* pSpaces)
+pProgram = Program <$> pList (pSpaces *> pDeclaration <* pSpaces)
 
 pDeclaration :: Parser Declaration
-pDeclaration = (pGlobalVariableDeclaration <|> pProcedure) <* pSpaces
+pDeclaration = (pProcedure <<|> pGlobalVariableDeclaration ) <* pSpaces
 
 pGlobalVariableDeclaration :: Parser Declaration
-pGlobalVariableDeclaration = GlobalVarDeclaration <$> pVariable <* pSpaces
+pGlobalVariableDeclaration = GlobalVarDeclaration <$> pVariable [";"] <* pSpaces
 
-pVariable :: Parser Variable
-pVariable = Variable <$> pIdentifier <* pSpaces <* pKey "::" <*> (fst <$> pType [";"])  
+pVariable :: [String] -> Parser Variable
+pVariable final = Variable <$> pIdentifier <* pSpaces <* pKey "::" <*> (fst <$> pType final)  
 
 pIdentifier :: Parser Identifier
 pIdentifier = Identifier <$> pMunch (\t -> 'a' <= t && t <= 'z') <* pSpaces
 
 pProcedure :: Parser Declaration
-pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <*> (pList pVariable) <*> pBlock
+pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <* pKey "(" <*> pVariableList <*> pBlock
+            where pVariableList = (:) <$> pVariable [","] <*> pVariableList <<|> (:[]) <$> pVariable [")"]
 
 pBlock :: Parser Block
 pBlock = pList (pStatement <* pSpaces)
@@ -99,7 +100,7 @@ pUncall = Uncall <$ pKey "uncall" <*> pIdentifier <*> pList pLHS
 
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
-                    pVariable <* pKey "=" <*> (fst <$> pExp [";"]) <*> 
+                    pVariable ["="] <*> (fst <$> pExp [";"]) <*> 
                     pBlock <*
                     pKey "delocal" <*> (fst <$> pExp [";"])
 

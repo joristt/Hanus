@@ -54,14 +54,24 @@ Assignment "swap" (LHSIdentifier "x", LHSIdentifier "y") ()
 -}
 
 instance Show Program where
-  show (Program decls) = show (length decls) ++ (intercalate "\n" $ map show decls)
+  show (Program decls) = intercalate "\n" $ map show decls
 
 instance Show Declaration where
-  show (GlobalVarDeclaration var) = show var
-  --show (Procedure identifier variables blocks) = show identifier ++ " " ++ concatMap show variables ++ "\n" ++ concatMap show blocks
+  show (GlobalVarDeclaration var) = "Decl: " ++ show var
+  show (Procedure identifier variables blocks) = "procedure " ++ show identifier ++ " (" ++ (intercalate "," $ map show variables) ++ ")\n" ++ intercalate "\n" (map show blocks)
 
 instance Show Variable where
   show (Variable identifier t) = show identifier ++ "::" ++ show t 
 
 instance Show Identifier where
   show (Identifier s) = s
+
+instance Show LHS where
+  show (LHSIdentifier identifier) = show identifier
+  show (LHSArray lhs exp) = show lhs ++ "[" ++ show exp ++ show "]"
+  show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
+
+instance Show Statement where
+  show (Assignement operator lhs exp ) = (intercalate ", " $ map show lhs) ++ operator ++ show exp
+  show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ (intercalate " " $ map show lhs)
+  show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ (intercalate " " $ map show lhs)

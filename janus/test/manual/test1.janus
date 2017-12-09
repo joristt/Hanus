@@ -1,1 +1,4 @@
 x :: Int;
+
+procedure f(x::Int)
+    x+=3;
