@@ -20,9 +20,9 @@ parseFile file = do
                     return $ program
 
 parser :: String -> Program
-parser s = parse pProgram (createStr (LineColPos 0 0 0) s)
+parser s = parse (pProgram <* pEnd) (createStr (LineColPos 0 0 0) s)
 
-parser1 x s = parse (addLength 0 x) (createStr (LineColPos 0 0 0) s)
+parser1 x s = parse (x <* pEnd) (createStr (LineColPos 0 0 0) s)
 
 pKey keyw = pToken keyw `micro` 1 <* spaces
 spaces :: Parser String
@@ -31,7 +31,8 @@ spaces = pMunch (`elem` " \n")
 pGreedyChoice (x:xs) = x <<|> (pGreedyChoice xs)
 pGreedyChoice [] = pFail
 
-pProgram = Program [] <$ pList (pSpaces *> pDeclaration <* pSpaces)
+pProgram :: Parser Program
+pProgram = Program <$ pSpaces <*> pList pDeclaration
 
 pDeclaration :: Parser Declaration
 pDeclaration = (pGlobalVariableDeclaration <|> pProcedure) <* pSpaces
