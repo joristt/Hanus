@@ -1,6 +1,7 @@
 module AST where
 
 import Language.Haskell.TH.Syntax
+import Data.List
 
 newtype Program = Program [Declaration]
 
@@ -38,7 +39,7 @@ data Statement
   | LoopUntil Exp Block Block Exp
   -- local x :: T = expr;
   --   block
-  -- delocal x = expr;
+  -- delocal expr;
   | LocalVarDeclaration Variable Exp Block Exp
 
 {-
@@ -51,3 +52,16 @@ swap x y
 (syntactic sugar for (x, y) `swap` ())
 Assignment "swap" (LHSIdentifier "x", LHSIdentifier "y") ()
 -}
+
+instance Show Program where
+  show (Program decls) = show (length decls) ++ (intercalate "\n" $ map show decls)
+
+instance Show Declaration where
+  show (GlobalVarDeclaration var) = show var
+  --show (Procedure identifier variables blocks) = show identifier ++ " " ++ concatMap show variables ++ "\n" ++ concatMap show blocks
+
+instance Show Variable where
+  show (Variable identifier t) = show identifier ++ "::" ++ show t 
+
+instance Show Identifier where
+  show (Identifier s) = s

@@ -11,8 +11,18 @@ import Text.ParserCombinators.UU.Core
 import Text.ParserCombinators.UU.BasicInstances
 import Language.Haskell.TH.Syntax
 
+parseFile :: FilePath -> IO Program
+parseFile file = do
+                    content <- readFile file
+                    putStrLn $ "Source " ++ content
+                    let program = parser content
+                    putStrLn $ "Program " ++ show program
+                    return $ program
+
 parser :: String -> Program
 parser s = parse pProgram (createStr (LineColPos 0 0 0) s)
+
+parser1 x s = parse (addLength 0 x) (createStr (LineColPos 0 0 0) s)
 
 pKey keyw = pToken keyw `micro` 1 <* spaces
 spaces :: Parser String
@@ -30,7 +40,7 @@ pGlobalVariableDeclaration :: Parser Declaration
 pGlobalVariableDeclaration = GlobalVarDeclaration <$> pVariable <* pSpaces
 
 pVariable :: Parser Variable
-pVariable = Variable <$> pIdentifier <* pSpaces <*> (fst <$> pType [";"])  
+pVariable = Variable <$> pIdentifier <* pSpaces <* pKey "::" <*> (fst <$> pType [";"])  
 
 pIdentifier :: Parser Identifier
 pIdentifier = Identifier <$> pMunch (\t -> 'a' <= t && t <= 'z') <* pSpaces
@@ -80,8 +90,18 @@ pLHSArray = LHSArray <$> pLHS <* (pKey "[") <*> (fst <$> pExp ["]"]) <* pSpaces
 pLHSField :: Parser LHS
 pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier <* pSpaces
 
-pCall = undefined
-pUncall= undefined
+pCall :: Parser Statement
+pCall = Call <$ pKey "call" <*> pIdentifier <*> pList pLHS
+
+pUncall :: Parser Statement
+pUncall = Uncall <$ pKey "uncall" <*> pIdentifier <*> pList pLHS
+
+
+pLocalVariable :: Parser Statement 
+pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
+                    pVariable <* pKey "=" <*> (fst <$> pExp [";"]) <*> 
+                    pBlock <*
+                    pKey "delocal" <*> (fst <$> pExp [";"])
 
 pIf :: Parser Statement
 pIf = If <$ pToken "if" <* pSpaces
@@ -120,4 +140,3 @@ pLoopAfterLoop = (\b e -> (b, e)) <$> pBlock <* pSpaces <* pToken "until" <* pSp
 pLoopAfterUntil :: Parser Exp
 pLoopAfterUntil = fst <$> pExp [";"] <* pSpaces
 
-pLocalVariable= undefined
