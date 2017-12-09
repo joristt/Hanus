@@ -9,6 +9,7 @@ import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.Core
 import Text.ParserCombinators.UU.BasicInstances
+import Language.Haskell.TH.Syntax
 
 parseFile :: FilePath -> IO Program
 parseFile file = do
@@ -95,11 +96,46 @@ pCall = Call <$ pKey "call" <*> pIdentifier <*> pList pLHS
 pUncall :: Parser Statement
 pUncall = Uncall <$ pKey "uncall" <*> pIdentifier <*> pList pLHS
 
-pIf= undefined
-pLoop= undefined
 
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
                     pVariable <* pKey "=" <*> (fst <$> pExp [";"]) <*> 
                     pBlock <*
                     pKey "delocal" <*> (fst <$> pExp [";"])
+
+pIf :: Parser Statement
+pIf = If <$ pToken "if" <* pSpaces
+  <*> (fst <$> pExp ["then"]) <* pSpaces <*> pBlock <* pSpaces
+  <*> pElse <* pSpaces <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
+  where
+    pElse = 
+        -- With 'else'
+        (pToken "else" *> pBlock)
+        <<|>
+        -- Without 'else'
+        (return ([]))
+
+pLoop :: Parser Statement
+pLoop = do
+  pToken "loop"
+  pSpaces
+  (exp, sep) <- pExp ["do", "loop", "until"]
+  pSpaces
+  (doBlock, loopBlock, untilExp) <- (case sep of
+    "do" -> pLoopAfterDo
+    "loop" -> (\(b, e) -> ([], b, e)) <$> pLoopAfterLoop
+    "until" -> (\e -> ([], [], e)) <$> pLoopAfterUntil) :: Parser (Block, Block, Exp)
+  return $ LoopUntil exp doBlock loopBlock untilExp
+
+pLoopAfterDo :: Parser (Block, Block, Exp)
+pLoopAfterDo = (\b1 (b2, e) -> (b1, b2, e)) <$ pSpaces <*> pBlock <* pSpaces <*> (
+    (pToken "loop" *> pLoopAfterLoop)
+    <<|> ((\e -> ([], e)) <$ pToken "until" <* pSpaces <*> pLoopAfterUntil)
+  )
+
+pLoopAfterLoop :: Parser (Block, Exp)
+pLoopAfterLoop = (\b e -> (b, e)) <$> pBlock <* pSpaces <* pToken "until" <* pSpaces <*> pLoopAfterUntil
+
+pLoopAfterUntil :: Parser Exp
+pLoopAfterUntil = fst <$> pExp [";"] <* pSpaces
+
