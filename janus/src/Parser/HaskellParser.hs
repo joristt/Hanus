@@ -12,10 +12,10 @@ import Language.Haskell.TH.Syntax
 myTest = parse (pType [";"]) (createStr (LineColPos 0 0 0) "Maybe [a];")
 
 pType :: [String] -> Parser (Type, String)
-pType splits = pSplitUntilSuccess "" splits (eitherToMaybe . parseType . init)
+pType splits = pSplitUntilSuccess "" splits (eitherToMaybe . parseType)
 
 pExp :: [String] -> Parser (Exp, String)
-pExp splits = pSplitUntilSuccess "" splits (eitherToMaybe . parseExp . init)
+pExp splits = pSplitUntilSuccess "" splits (eitherToMaybe . parseExp)
 
 pSplitUntilSuccess :: String -> [String] -> (String -> Maybe a) -> Parser (a, String)
 pSplitUntilSuccess prefix splits f = do
