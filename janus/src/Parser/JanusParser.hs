@@ -9,6 +9,7 @@ import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.Core
 import Text.ParserCombinators.UU.BasicInstances
+import Text.ParserCombinators.UU.Utils
 import Language.Haskell.TH.Syntax
 
 parseFile :: FilePath -> IO Program
@@ -20,9 +21,12 @@ parseFile file = do
                     return $ program
 
 parser :: String -> Program
-parser s = parse (pProgram <* pEnd) (createStr (LineColPos 0 0 0) s)
+parser = parser1 pProgram
 
-parser1 x s = parse (x <* pEnd) (createStr (LineColPos 0 0 0) s)
+parser1 :: Parser a -> String -> a
+parser1 p s = case execParser p s of
+    (a, [])   -> a
+    (_, e:es) -> error $ "Parsing failed. First error:\n" ++ show e
 
 pKey keyw = pToken keyw `micro` 1 <* spaces
 spaces :: Parser String
