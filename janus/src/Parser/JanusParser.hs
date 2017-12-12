@@ -63,11 +63,11 @@ pIdentifier = (\h t -> Identifier (h : t)) <$> pSatisfy validChar (Insertion "id
     validChar t = 'a' <= t && t <= 'z'
 
 pProcedure :: Parser Declaration
-pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <* pKey "(" <*> pVariableList <* pSpaces <*> pBlock
+pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <* pKey "(" <*> pVariableList <* pSpaces <* pKey "{" <* pSpaces <*> pBlock <* pSpaces <* pKey "}"
             where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
 
 pBlock :: Parser Block
-pBlock = return <$> (pStatement)
+pBlock = pList (pStatement)
 
 pStatement :: Parser Statement
 pStatement = pGreedyChoice [
@@ -83,7 +83,7 @@ pStatement = pGreedyChoice [
 
 
 pAssignement :: Parser Statement
-pAssignement = Assignement <$> pOperator <*> (pList pLHS) <*> (fst <$> pExp [";"])
+pAssignement = (\x y z->Assignement y x z) <$>  (pList pLHS) <*> pOperator <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
 pOperator = ((++) <$> pGreedyChoice [

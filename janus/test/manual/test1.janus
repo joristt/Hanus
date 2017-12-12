@@ -1,4 +1,7 @@
 x :: Int;
 
-procedure f(x::Int)
-    x+=3;
+procedure f(x::Int, y::Int->String)
+{
+    x += 3;
+    y ^= 1;
+}
