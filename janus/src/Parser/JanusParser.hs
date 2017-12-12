@@ -43,20 +43,31 @@ pDeclaration :: Parser Declaration
 pDeclaration = (pProcedure <<|> pGlobalVariableDeclaration ) <* pSpaces
 
 pGlobalVariableDeclaration :: Parser Declaration
-pGlobalVariableDeclaration = GlobalVarDeclaration <$> pVariable [";"] <* pSpaces
+pGlobalVariableDeclaration = GlobalVarDeclaration <$> (fst <$> pVariable [";"]) <* pSpaces
 
-pVariable :: [String] -> Parser Variable
-pVariable final = Variable <$> pIdentifier <* pSpaces <* pKey "::" <*> (fst <$> pType final)  
+pVariable :: [String] -> Parser (Variable, String)
+pVariable final = (\name (t, sep) -> (Variable name t, sep)) <$> pIdentifier <* pSpaces <* pKey "::" <*> pType final
+
+pNonEmptyArgumentList :: Parser [Variable]
+pNonEmptyArgumentList = addLength 10 (do
+    (var, sep) <- pVariable [")", ","]
+    pSpaces
+    case sep of
+      ")" -> return [var]
+      "," -> (var :) <$> pNonEmptyArgumentList `micro` 1
+  )
 
 pIdentifier :: Parser Identifier
-pIdentifier = Identifier <$> pMunch (\t -> 'a' <= t && t <= 'z') <* pSpaces
+pIdentifier = (\h t -> Identifier (h : t)) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar <* pSpaces
+  where
+    validChar t = 'a' <= t && t <= 'z'
 
 pProcedure :: Parser Declaration
-pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <* pKey "(" <*> pVariableList <*> pBlock
-            where pVariableList = (:) <$> pVariable [","] <*> pVariableList <<|> (:[]) <$> pVariable [")"]
+pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <* pKey "(" <*> pVariableList <* pSpaces <*> pBlock
+            where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
 
 pBlock :: Parser Block
-pBlock = pList (pStatement <* pSpaces)
+pBlock = return <$> (pStatement)
 
 pStatement :: Parser Statement
 pStatement = pGreedyChoice [
@@ -83,10 +94,10 @@ pOperator = ((++) <$> pGreedyChoice [
 
 pLHS :: Parser LHS
 pLHS = pGreedyChoice [
-            pLHSIdentifier,
+            pLHSIdentifier {-,
             pLHSArray,
-            pLHSField
-        ]
+            pLHSField -}
+        ] <* pSpaces
 
 pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier <* pSpaces
@@ -98,15 +109,14 @@ pLHSField :: Parser LHS
 pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier <* pSpaces
 
 pCall :: Parser Statement
-pCall = Call <$ pKey "call" <*> pIdentifier <*> pList pLHS
+pCall = Call <$ pKey "call" <*> pIdentifier <*> pMany pLHS
 
 pUncall :: Parser Statement
 pUncall = Uncall <$ pKey "uncall" <*> pIdentifier <*> pList pLHS
 
-
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
-                    pVariable ["="] <*> (fst <$> pExp [";"]) <*> 
+                    (fst <$> pVariable ["="]) <*> (fst <$> pExp [";"]) <*> 
                     pBlock <*
                     pKey "delocal" <*> (fst <$> pExp [";"])
 
