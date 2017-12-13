@@ -107,14 +107,14 @@ evalAssignment :: LHS -> Exp -> Q [Stmt]
 evalAssignment (LHSIdentifier n) expr = do
     -- you can't do: "let x = x + 5", instead you have
     -- to do "let y = x + 5; let x = y"
-    let op           = VarE (mkName "+")
-    tempname <- newName "a"
+    let op        = VarE (mkName "+")
+    tempname     <- newName "a"
     let finalname = namify n
-    let lhs2          = VarP $ namify n
-    let rhs1         = NormalB $ UInfixE (VarE finalname) op expr
-    let rhs2          = NormalB $ (VarE tempname)
-    let stmt1 = LetS [ValD (VarP tempname) rhs1 []]
-    let stmt2 = LetS [ValD (VarP finalname) rhs2 []]
+    let lhs2      = VarP $ namify n
+    let rhs1      = NormalB $ UInfixE (VarE finalname) op expr
+    let rhs2      = NormalB $ (VarE tempname)
+    let stmt1     = LetS [ValD (VarP tempname) rhs1 []]
+    let stmt2     = LetS [ValD (VarP finalname) rhs2 []]
     return [stmt1, stmt2]
 evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
 
