@@ -29,7 +29,9 @@ evalProgram (Program decls) = do
           entry = do
               fcall <- getMain globalVars
               binds <- vdecs
-              let body = (DoE (binds:[NoBindS fcall]))
+              stTup <- statePattern globalVars
+              let body = DoE (binds:[BindS (TupP stTup) fcall, 
+                            NoBindS (AppE (VarE $ mkName "return") (TupP stTup))])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
           vdecs = do
               decs <- mapM genDec globalVars
