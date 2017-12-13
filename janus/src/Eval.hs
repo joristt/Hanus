@@ -45,3 +45,18 @@ evalProgram (Program decls) = do
               unit <- [e|()|]
               let body = (DoE [NoBindS unit])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
+
+shadow :: Identifier -> Q Name
+shadow (Identifier n) = newName n
+
+evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
+    name <- shadow n
+    return (name, LetS [ValD (VarP name) (NormalB e) []])
+
+evalProcedure (Procedure n vs b) = do
+    name <- shadow n
+    body <- evalBlock s
+    let args = map VarP vs
+    FunD name [Clause args body []]
+
+evalBlock stmts s = do

@@ -1,13 +1,11 @@
 module AST where
 
-import Language.Haskell.TH.Syntax hiding (Type) 
+import Language.Haskell.TH.Syntax
 
 newtype Program = Program [Declaration]
 
 data Declaration = GlobalVarDeclaration Variable Exp
                  | Procedure Identifier [Variable] Block
-
-data Type = Int | String
 
 data Variable = Variable Identifier Type
 
