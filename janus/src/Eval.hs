@@ -11,13 +11,10 @@ import Control.Monad
 import qualified Debug.Trace as Debug
 
 globvartype = ConT $ mkName "Int"
-stringtype = ConT $ mkName "String"
-globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
---globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 10))
---globvar3 = GlobalVarDeclaration (Variable (Identifier "glob_var3") stringtype) (LitE (StringL "Dag joris"))
-mainn = Procedure (Identifier "main") [] [(Assignement [LHSIdentifier (Identifier "glob_var1")] (LitE (IntegerL 1)))]
 
-p = Program [globvar {-globvar2, globvar3, -}, mainn]
+globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
+
+progFromExp e = Program [globvar, Procedure (Identifier "main") [] [(Assignement [LHSIdentifier (Identifier "glob_var1")] e)]]
 
 evalProgram :: Program -> Q [Dec]
 evalProgram (Program decls) = do  
@@ -37,12 +34,15 @@ evalProgram (Program decls) = do
               fcall <- getMain globalVars
               binds <- vdecs
               stTup <- statePattern globalVars
-              let body = DoE (binds:[LetS [ValD (TupP stTup) (NormalB fcall) []],
+              let body = DoE (binds:[functionCall (TupP stTup) fcall,
                             NoBindS ((tupP2tupE . TupP) stTup)])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
           vdecs = do
               decs <- mapM genDec globalVars
               return (LetS decs)
+
+functionCall :: Pat -> Exp -> Stmt
+functionCall pattern exp = LetS [ValD pattern (NormalB exp) []]
 
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
