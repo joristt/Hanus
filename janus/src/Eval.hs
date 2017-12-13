@@ -37,7 +37,7 @@ evalProgram (Program decls) = do
 
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
-    name <- shadow ident
+    let name = namify ident
     return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
 getMain :: [Declaration] -> Q Exp
@@ -54,15 +54,15 @@ statePattern varDecs = mapM toPat varDecs
 namify :: Identifier -> Name
 namify (Identifier n) = mkName n
 
-evalGlobalVarDeclaration :: Declaration -> Q (Name, Stmt)
-evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
-    let name = namify n
-    return $ LetS [ValD (VarP name) (NormalB e) []]
-
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
     let name = namify n
     return $ SigP (VarP name) t
+
+evalGlobalVarDeclaration :: Declaration -> Q Stmt
+evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
+    let name = namify n
+    return $ LetS [ValD (VarP name) (NormalB e) []]
 
 evalProcedure globalArgs (Procedure n vs b) = do
     let name = namify n
