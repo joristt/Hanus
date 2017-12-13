@@ -7,8 +7,19 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 import Data.Maybe
 
-declare :: Name -> Lit -> Stmt
-declare n l = LetS [ValD (VarP n) (NormalB (LitE l)) []]
+evalProgram :: Program -> Q Dec
+evalProgram (Program decls) = do 
+    unit <- [e|()|]
+    let body = (DoE [NoBindS unit])
+    return (FunD (mkName "main") [Clause [] (NormalB body) []])
+    where globalVars = filter filterVars decls
+          procedures = filter filterProcs decls
+          filterVars dec  = case dec of 
+                                GlobalVarDeclaration _ _ -> True
+                                otherwise                -> False
+          filterProcs dec = case dec of 
+                                Procedure _ _ _ -> True
+                                otherwise       -> False
 
 shadow :: Identifier -> Q Name
 shadow (Identifier n) = newName n
@@ -25,6 +36,11 @@ evalProcedure (Procedure n vs b) = do
 
 evalBlock stmts s = do
 
+
+
+
+--declare :: Name -> Lit -> Stmt
+--declare n l = LetS [ValD (VarP n) (NormalB (LitE l)) []]
 
 ----evalDeclaration :: GlobalVarDeclaration -> 
 --evalDeclaration (GlobalVarDeclaration (Variable (Identifier n) t) e)
