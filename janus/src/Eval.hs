@@ -8,9 +8,14 @@ import Language.Haskell.TH
 import Data.Maybe
 import Control.Monad
 
-globvartype = ConT $ mkName "Inttt"
+import qualified Debug.Trace as Debug
+
+globvartype = ConT $ mkName "Int"
+stringtype = ConT $ mkName "String"
 globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
-p = Program [globvar]
+globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 10))
+globvar3 = GlobalVarDeclaration (Variable (Identifier "glob_var3") stringtype) (LitE (StringL "Dag joris"))
+p = Program [globvar, globvar2, globvar3]
 
 evalProgram :: Program -> Q [Dec]
 evalProgram (Program decls) = do  
@@ -31,7 +36,7 @@ evalProgram (Program decls) = do
               binds <- vdecs
               stTup <- statePattern globalVars
               let body = DoE (binds:[BindS (TupP stTup) fcall, 
-                            NoBindS (AppE (VarE $ mkName "return") (TupP stTup))])
+                            NoBindS (AppE (VarE $ mkName "return") ((tupP2tupE . TupP) stTup))])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
           vdecs = do
               decs <- mapM genDec globalVars
@@ -92,4 +97,4 @@ varToPat (Variable n t) = do
     return $ SigP (VarP name) t
 
 tupP2tupE :: Pat -> Exp
-tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
+tupP2tupE (TupP pats) = Debug.trace (show pats) $ TupE $ map (\(SigP (VarP name) _) -> VarE name) pats
