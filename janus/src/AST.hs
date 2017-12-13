@@ -4,7 +4,7 @@ import Language.Haskell.TH.Syntax hiding (Type)
 
 newtype Program = Program [Declaration]
 
-data Declaration = GlobalVarDeclaration Variable
+data Declaration = GlobalVarDeclaration Variable Exp
                  | Procedure Identifier [Variable] Block
 
 data Type = Int | String
