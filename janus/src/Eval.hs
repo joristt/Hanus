@@ -7,6 +7,10 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 import Data.Maybe
 
+globvartype = ConT $ mkName "Int"
+globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
+p = Program [globvar]
+
 evalProgram :: Program -> Q [Dec]
 evalProgram (Program decls) = do  
         x <- entry
@@ -38,9 +42,9 @@ varToPat (Variable n t) = do
 
 evalProcedure globalArgs (Procedure n vs b) = do
     name <- shadow n
-    let body      = evalBlock vs
+    let body = evalBlock vs
     inputArgs <- mapM varToPat vs
-    let pattern   = TupP (globalArgs ++ inputArgs)
+    let pattern = TupP (globalArgs ++ inputArgs)
     return $ FunD name [Clause [pattern] body []]
 
 -- evaluates a Block (note that type Block = [Statement])
