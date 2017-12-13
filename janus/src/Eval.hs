@@ -29,11 +29,10 @@ getVal value = do
     let qdo  = DoE [bind, ret]
     return qdo
 
-evalProgram :: Program -> Q Dec
-evalProgram (Program decls) = do 
-    unit <- [e|()|]
-    let body = (DoE [NoBindS unit])
-    return (FunD (mkName "main") [Clause [] (NormalB body) []])
+evalProgram :: Program -> Q [Dec]
+evalProgram (Program decls) = do  
+        x <- entry
+        return x:[]
     where globalVars = filter filterVars decls
           procedures = filter filterProcs decls
           filterVars dec  = case dec of 
@@ -42,4 +41,7 @@ evalProgram (Program decls) = do
           filterProcs dec = case dec of 
                                 Procedure _ _ _ -> True
                                 otherwise       -> False
-
+          entry = do 
+              unit <- [e|()|]
+              let body = (DoE [NoBindS unit])
+              return (FunD (mkName "run") [Clause [] (NormalB body) []])
