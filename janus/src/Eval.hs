@@ -53,14 +53,6 @@ statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
     where toPat (GlobalVarDeclaration var _) = varToPat var
 
-namify :: Identifier -> Name
-namify (Identifier n) = mkName n
-
-varToPat :: Variable -> Q Pat
-varToPat (Variable n t) = do
-    let name = namify n
-    return $ SigP (VarP name) t
-
 evalGlobalVarDeclaration :: Declaration -> Q Stmt
 evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
     let name = namify n
@@ -72,9 +64,6 @@ evalProcedure globalArgs (Procedure n vs b) = do
     let pattern = TupP (globalArgs ++ inputArgs)
     let body = evalProcedureBody b pattern
     return $ FunD name [Clause [pattern] body []]
-
-tupP2tupE :: Pat -> Exp
-tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 evalProcedureBody ss pattern = do
@@ -92,4 +81,15 @@ evalAssignment (LHSIdentifier n) expr
     = LetS [ValD (VarP $ namify n) (NormalB expr) []]
 evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
 
+-- *** HELPERS *** ---
 
+namify :: Identifier -> Name
+namify (Identifier n) = mkName n
+
+varToPat :: Variable -> Q Pat
+varToPat (Variable n t) = do
+    let name = namify n
+    return $ SigP (VarP name) t
+
+tupP2tupE :: Pat -> Exp
+tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
