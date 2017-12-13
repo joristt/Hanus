@@ -9,7 +9,7 @@ data Declaration = GlobalVarDeclaration Variable Exp
 
 data Variable = Variable Identifier Type
 
-newtype Identifier = Identifier String
+newtype Identifier = Identifier String deriving (Eq, Ord)
               
 --data LHS = LHSVariable Variable
 data LHS = LHSIdentifier Identifier

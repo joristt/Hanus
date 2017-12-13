@@ -7,32 +7,33 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 import Data.Maybe
 import Control.Monad
+import qualified Data.Map as Map
 
 import qualified Debug.Trace as Debug
+
+type StatePatterns = Map.Map Identifier [Pat]
 
 -- Simple test program
 globvartype = ConT $ mkName "Int"
 globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
-progFromExp e = Program [globvar, Procedure (Identifier "main") [] [(Assignement [LHSIdentifier (Identifier "glob_var1")] e)]]
+proc1 = Procedure (Identifier "main") [] [Call (Identifier "add10") []]
+proc2 = Procedure (Identifier "add10") [] [(Assignement [LHSIdentifier (Identifier "glob_var1")] (LitE (IntegerL 10)))]
+p = Program [globvar, proc1, proc2]
 
 -- Evaluate a given program by generating a 'run' function that calls the 'main' procedure of the program. 
 evalProgram :: Program -> Q [Dec]
-evalProgram (Program decls) = do  
+evalProgram p@(Program decls) = do  
+        -- fetch function state information
+        stPats <- getStatePatterns p
         -- generate program entry point ('run' function)
         x  <- entry
         -- generate pattern for program state
         pt <- statePattern globalVars
         -- generate function declarations for all procedures in program
-        fdecs <- mapM (evalProcedure pt) procedures
+        fdecs <- mapM (evalProcedure stPats pt) procedures
         return $ (x:fdecs)
-    where globalVars = filter filterVars decls
-          procedures = filter filterProcs decls
-          filterVars dec  = case dec of 
-                                GlobalVarDeclaration _ _ -> True
-                                otherwise                -> False
-          filterProcs dec = case dec of 
-                                Procedure _ _ _ -> True
-                                otherwise       -> False
+    where procedures = getProcedures p
+          globalVars = getVariableDecs p
           -- generates the program entry point
           entry = do
               fcall <- getMain globalVars
@@ -75,24 +76,25 @@ evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
     let name = namify n
     return $ LetS [ValD (VarP name) (NormalB e) []]
 
-evalProcedure :: [Pat] -> Declaration -> Q Dec
-evalProcedure globalArgs (Procedure n vs b) = do
+evalProcedure :: StatePatterns -> [Pat] -> Declaration -> Q Dec
+evalProcedure stPatterns globalArgs (Procedure n vs b) = do
     let name = namify n
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
-    body <- evalProcedureBody b pattern
+    body <- evalProcedureBody stPatterns b pattern
     return $ FunD name [Clause [pattern] body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody :: [Statement] -> Pat -> Q Body
-evalProcedureBody ss pattern = do
-    x <- concatMapM evalStatement ss
+evalProcedureBody :: StatePatterns -> [Statement] -> Pat -> Q Body
+evalProcedureBody stPatterns ss pattern = do
+    x <- concatMapM (evalStatement stPatterns) ss
     return $ NormalB $ DoE $ x ++ [returnTup]
         where returnTup = NoBindS $ tupP2tupE pattern
 
-evalStatement :: Statement -> Q [Stmt]
-evalStatement (Assignement lhss expr) = evalAssignments lhss expr
-evalStatement _ = error "Only Assignment can be evaluated at the moment."
+evalStatement :: StatePatterns -> Statement -> Q [Stmt]
+evalStatement _ (Assignement lhss expr)             = evalAssignments lhss expr
+evalStatement stPatterns (Call (Identifier i) args) = evalFunctionCall stPatterns i args
+evalStatement _ _ = error "Only Assignment can be evaluated at the moment."
 
 evalAssignments :: [LHS] -> Exp -> Q [Stmt]
 evalAssignments lhss expr = concatMapM (\lhs -> evalAssignment lhs expr) lhss
@@ -112,6 +114,18 @@ evalAssignment (LHSIdentifier n) expr = do
     return [stmt1, stmt2]
 evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
 
+evalFunctionCall :: StatePatterns -> String -> [LHS] -> Q [Stmt]
+evalFunctionCall stPatterns name args = do
+    let rPat = TupP pattern
+    f <- foldM (\exp pat -> do
+                    arg <- expFromVarP pat
+                    return (AppE exp arg))
+         ((VarE . mkName) name) pattern
+    return [(functionCall rPat f)] 
+    where pattern = case Map.lookup (Identifier name) stPatterns of
+                        (Just pat) -> pat
+                        Nothing    -> error "call to unknown function" 
+
 -- *** HELPERS *** ---
 
 namify :: Identifier -> Name
@@ -122,9 +136,35 @@ varToPat (Variable n t) = do
     let name = namify n
     return $ SigP (VarP name) t
 
+expFromVarP :: Pat -> Q Exp
+expFromVarP (SigP (VarP name) _) = return (VarE name) 
+
 tupP2tupE :: Pat -> Exp
 tupP2tupE (TupP pats) = TupE $ map (\(SigP (VarP name) _) -> VarE name) pats
 
 concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
 concatMapM op = foldr f (return [])
     where f x xs = do x <- op x; if null x then xs else do xs <- xs; return $ x++xs
+
+getStatePatterns :: Program -> Q StatePatterns
+getStatePatterns program = do 
+    patterns <- mapM (\(Procedure _ args _) -> getP args) procedures
+    let identifiers = map (\(Procedure identifier _ _) -> identifier) procedures
+    return $ Map.fromList (zip identifiers patterns)
+    where procedures = getProcedures program
+          getP args  = do
+                globals <- statePattern (getVariableDecs program)
+                argPats <- mapM varToPat args
+                return $ globals ++ argPats
+
+getProcedures :: Program -> [Declaration]
+getProcedures (Program xs) = filter filterProcs xs
+    where filterProcs dec = case dec of 
+                                Procedure _ _ _ -> True
+                                otherwise       -> False
+
+getVariableDecs :: Program -> [Declaration]
+getVariableDecs (Program decs) = filter filterVars decs
+    where filterVars dec  = case dec of 
+                                GlobalVarDeclaration _ _ -> True
+                                otherwise                -> False
