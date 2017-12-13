@@ -8,7 +8,7 @@ import Language.Haskell.TH
 import Data.Maybe
 import Control.Monad
 
-globvartype = ConT $ mkName "Int"
+globvartype = ConT $ mkName "Inttt"
 globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
 p = Program [globvar]
 
@@ -39,7 +39,7 @@ evalProgram (Program decls) = do
 
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
-    name <- shadow ident
+    let name = namify ident
     return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
 getMain :: [Declaration] -> Q Exp
@@ -53,27 +53,43 @@ statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
     where toPat (GlobalVarDeclaration var _) = varToPat var
 
-shadow :: Identifier -> Q Name
-shadow (Identifier n) = newName n
-
-evalGlobalVarDeclaration :: Declaration -> Q (Name, Stmt)
-evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
-    name <- shadow n
-    return (name, LetS [ValD (VarP name) (NormalB e) []])
+namify :: Identifier -> Name
+namify (Identifier n) = mkName n
 
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
-    name <- shadow n
+    let name = namify n
     return $ SigP (VarP name) t
 
+evalGlobalVarDeclaration :: Declaration -> Q Stmt
+evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
+    let name = namify n
+    return $ LetS [ValD (VarP name) (NormalB e) []]
+
 evalProcedure globalArgs (Procedure n vs b) = do
-    name <- shadow n
-    let body = evalBlock vs
+    let name = namify n
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
+    let body = evalProcedureBody b pattern
     return $ FunD name [Clause [pattern] body []]
 
--- evaluates a Block (note that type Block = [Statement])
-evalBlock ss = NormalB (ListE (map evalStatement ss))
+tupP2tupE :: Pat -> Exp
+tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
 
-evalStatement x = TupE []
+-- Evaluates a procedure body (== Block (note that type Block = [Statement]))
+evalProcedureBody ss pattern = do
+    NormalB $ DoE $ (concatMap evalStatement ss) ++ [returnTup]
+        where returnTup = NoBindS $ tupP2tupE pattern
+
+evalStatement (Assignement lhss expr) = evalAssignments lhss expr
+evalStatement _ = error "Only Assignment can be evaluated at the moment."
+
+evalAssignments :: [LHS] -> Exp -> [Stmt]
+evalAssignments lhss expr = map (\lhs -> evalAssignment lhs expr) lhss
+
+evalAssignment :: LHS -> Exp -> Stmt
+evalAssignment (LHSIdentifier n) expr
+    = LetS [ValD (VarP $ namify n) (NormalB expr) []]
+evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
+
+
