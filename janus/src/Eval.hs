@@ -7,7 +7,7 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 import Data.Maybe
 
-globvartype = ConT $ mkName "Int"
+globvartype = ConT $ mkName "Inttt"
 globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
 p = Program [globvar]
 
@@ -28,26 +28,42 @@ evalProgram (Program decls) = do
               let body = (DoE [NoBindS unit])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
 
-shadow :: Identifier -> Q Name
-shadow (Identifier n) = newName n
+namify :: Identifier -> Name
+namify (Identifier n) = mkName n
 
 evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
-    name <- shadow n
-    return (name, LetS [ValD (VarP name) (NormalB e) []])
+    let name = namify n
+    return $ LetS [ValD (VarP name) (NormalB e) []]
 
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
-    name <- shadow n
+    let name = namify n
     return $ SigP (VarP name) t
 
 evalProcedure globalArgs (Procedure n vs b) = do
-    name <- shadow n
-    let body = evalBlock vs
+    let name = namify n
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
+    let body = evalProcedureBody b pattern
     return $ FunD name [Clause [pattern] body []]
 
--- evaluates a Block (note that type Block = [Statement])
-evalBlock ss = NormalB (ListE (map evalStatement ss))
+tupP2tupE :: Pat -> Exp
+tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
 
-evalStatement x = TupE []
+-- Evaluates a procedure body (== Block (note that type Block = [Statement]))
+evalProcedureBody ss pattern = do
+    NormalB $ DoE $ (concatMap evalStatement ss) ++ [returnTup]
+        where returnTup = NoBindS $ tupP2tupE pattern
+
+evalStatement (Assignement lhss expr) = evalAssignments lhss expr
+evalStatement _ = error "Only Assignment can be evaluated at the moment."
+
+evalAssignments :: [LHS] -> Exp -> [Stmt]
+evalAssignments lhss expr = map (\lhs -> evalAssignment lhs expr) lhss
+
+evalAssignment :: LHS -> Exp -> Stmt
+evalAssignment (LHSIdentifier n) expr
+    = LetS [ValD (VarP $ namify n) (NormalB expr) []]
+evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
+
+
