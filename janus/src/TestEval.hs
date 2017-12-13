@@ -6,8 +6,5 @@ import AST
 import Eval
 import Language.Haskell.TH.Syntax
 
---typetest = $(typeTest Int)
---test  = $(getVal 10)
---test2 = $(evalDeclaration (GlobalVarDeclaration (Variable (Identifier "a") Int)))
-
-$(evalProgram (progFromExp (LitE (IntegerL 45))))
+-- Example program that sets the first argument in the program to "sum [1..10]" and then adds 10 to it.
+$(evalProgram (progFromExp (AppE (VarE $ mkName "sum") (ArithSeqE (FromToR (LitE (IntegerL 1)) (LitE (IntegerL 10)))))))

@@ -92,6 +92,7 @@ evalProcedureBody ss pattern = do
 
 evalStatement :: Statement -> Q [Stmt]
 evalStatement (Assignement lhss expr) = evalAssignments lhss expr
+--evalStatement (LocalVarDeclaration v e1 b e2) = evalLocalVarDeclaration v e1 b e2
 evalStatement _ = error "Only Assignment can be evaluated at the moment."
 
 evalAssignments :: [LHS] -> Exp -> Q [Stmt]
@@ -111,6 +112,11 @@ evalAssignment (LHSIdentifier n) expr = do
     let stmt2     = LetS [ValD (VarP finalname) rhs2 []]
     return [stmt1, stmt2]
 evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
+
+--evalLocalVarDeclaration (LocalVarDeclaration v e1 b e2)
+    -- = newName "local_var_block"
+
+
 
 -- *** HELPERS *** ---
 
