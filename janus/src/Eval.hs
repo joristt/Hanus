@@ -10,16 +10,19 @@ import Control.Monad
 
 import qualified Debug.Trace as Debug
 
+-- Simple test program
 globvartype = ConT $ mkName "Int"
-
 globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
-
 progFromExp e = Program [globvar, Procedure (Identifier "main") [] [(Assignement [LHSIdentifier (Identifier "glob_var1")] e)]]
 
+-- Evaluate a given program by generating a 'run' function that calls the 'main' procedure of the program. 
 evalProgram :: Program -> Q [Dec]
 evalProgram (Program decls) = do  
+        -- generate program entry point ('run' function)
         x  <- entry
+        -- generate pattern for program state
         pt <- statePattern globalVars
+        -- generate function declarations for all procedures in program
         fdecs <- mapM (evalProcedure pt) procedures
         return $ (x:fdecs)
     where globalVars = filter filterVars decls
@@ -30,6 +33,12 @@ evalProgram (Program decls) = do
           filterProcs dec = case dec of 
                                 Procedure _ _ _ -> True
                                 otherwise       -> False
+          -- generates the program entry point; a function of the following form:
+          -- run = do
+          --    let globalVar1 = ...
+          --    let globalVar2 = ...
+          --    (globalVar1, globalVar2, ... ) = main globalVar1 globalVar2 ...
+          --    return (globalVar1, globalVar2, ...)
           entry = do
               fcall <- getMain globalVars
               binds <- vdecs
@@ -37,18 +46,24 @@ evalProgram (Program decls) = do
               let body = DoE (binds:[functionCall (TupP stTup) fcall,
                             NoBindS ((tupP2tupE . TupP) stTup)])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
+          -- Let bindigs for variable declarations
           vdecs = do
               decs <- mapM genDec globalVars
               return (LetS decs)
 
+-- generate a let statement from pattern and expression of the form
+-- let *pat* = *exp* to be used in do expressions
 functionCall :: Pat -> Exp -> Stmt
 functionCall pattern exp = LetS [ValD pattern (NormalB exp) []]
 
+-- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
     let name = namify ident
     return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
+-- Generate an expression that calls the main function with all global 
+-- variables as state
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
     name <- [e|main|]
@@ -56,6 +71,7 @@ getMain decs = do
     x <- foldM (\exp el -> return (AppE exp el)) name args
     return x
 
+-- Generate a pattern that represents the program state 
 statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
     where toPat (GlobalVarDeclaration var _) = varToPat var
