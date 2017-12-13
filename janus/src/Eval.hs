@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-} 
 
 module Eval where
 
@@ -6,6 +6,7 @@ import AST
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 import Data.Maybe
+import Control.Monad
 
 globvartype = ConT $ mkName "Inttt"
 globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
@@ -13,8 +14,10 @@ p = Program [globvar]
 
 evalProgram :: Program -> Q [Dec]
 evalProgram (Program decls) = do  
-        x <- entry
-        return (x:[])
+        x  <- entry
+        pt <- statePattern globalVars
+        fdecs <- mapM (evalProcedure pt) procedures
+        return $ (x:fdecs)
     where globalVars = filter filterVars decls
           procedures = filter filterProcs decls
           filterVars dec  = case dec of 
@@ -23,14 +26,35 @@ evalProgram (Program decls) = do
           filterProcs dec = case dec of 
                                 Procedure _ _ _ -> True
                                 otherwise       -> False
-          entry = do 
-              unit <- [e|()|]
-              let body = (DoE [NoBindS unit])
+          entry = do
+              fcall <- getMain globalVars
+              binds <- vdecs
+              let body = (DoE (binds:[NoBindS fcall]))
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
+          vdecs = do
+              decs <- mapM genDec globalVars
+              return (LetS decs)
+
+genDec :: Declaration -> Q Dec
+genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
+    name <- shadow ident
+    return (ValD (SigP (VarP name) t) (NormalB exp) []) 
+
+getMain :: [Declaration] -> Q Exp
+getMain decs = do 
+    name <- [e|main|]
+    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _) _) -> return ((VarE . mkName) x)) decs
+    x <- foldM (\exp el -> return (AppE exp el)) name args
+    return x
+
+statePattern :: [Declaration] -> Q [Pat]
+statePattern varDecs = mapM toPat varDecs
+    where toPat (GlobalVarDeclaration var _) = varToPat var
 
 namify :: Identifier -> Name
 namify (Identifier n) = mkName n
 
+evalGlobalVarDeclaration :: Declaration -> Q (Name, Stmt)
 evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
     let name = namify n
     return $ LetS [ValD (VarP name) (NormalB e) []]
