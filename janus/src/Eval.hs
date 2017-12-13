@@ -70,25 +70,36 @@ evalProcedure globalArgs (Procedure n vs b) = do
     let name = namify n
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
-    let body = evalProcedureBody b pattern
+    body <- evalProcedureBody b pattern
     return $ FunD name [Clause [pattern] body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody :: Foldable t => t Statement -> Pat -> Body
+evalProcedureBody :: Foldable t => t Statement -> Pat -> Q Body
 evalProcedureBody ss pattern = do
-    NormalB $ DoE $ (concatMap evalStatement ss) ++ [returnTup]
+    x <- concatMapM evalStatement ss
+    return $ NormalB $ DoE $ x ++ [returnTup]
         where returnTup = NoBindS $ tupP2tupE pattern
 
-evalStatement :: Statement -> [Stmt]
+evalStatement :: Statement -> Q [Stmt]
 evalStatement (Assignement lhss expr) = evalAssignments lhss expr
 evalStatement _ = error "Only Assignment can be evaluated at the moment."
 
-evalAssignments :: [LHS] -> Exp -> [Stmt]
-evalAssignments lhss expr = map (\lhs -> evalAssignment lhs expr) lhss
+evalAssignments :: [LHS] -> Exp -> Q [Stmt]
+evalAssignments lhss expr = concatMapM (\lhs -> evalAssignment lhs expr) lhss
 
-evalAssignment :: LHS -> Exp -> Stmt
-evalAssignment (LHSIdentifier n) expr
-    = LetS [ValD (VarP $ namify n) (NormalB expr) []]
+evalAssignment :: LHS -> Exp -> Q [Stmt]
+evalAssignment (LHSIdentifier n) expr = do
+    -- you can't do: "let x = x + 5", instead you have
+    -- to do "let y = x + 5; let x = y"
+    let op           = VarE (mkName "+")
+    tempname <- newName "a"
+    let finalname = namify n
+    let lhs2          = VarP $ namify n
+    let rhs1         = NormalB $ UInfixE (VarE finalname) op expr
+    let rhs2          = NormalB $ (VarE tempname)
+    let stmt1 = LetS [ValD (VarP tempname) rhs1 []]
+    let stmt2 = LetS [ValD (VarP finalname) rhs2 []]
+    return [stmt1, stmt2]
 evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
 
 -- *** HELPERS *** ---
@@ -103,3 +114,7 @@ varToPat (Variable n t) = do
 
 tupP2tupE :: Pat -> Exp
 tupP2tupE (TupP pats) = TupE $ map (\(SigP (VarP name) _) -> VarE name) pats
+
+--concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
+concatMapM op = foldr f (return [])
+    where f x xs = do x <- op x; if null x then xs else do xs <- xs; return $ x++xs
