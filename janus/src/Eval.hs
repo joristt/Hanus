@@ -43,8 +43,7 @@ evalProgram (Program decls) = do
               fcall <- getMain globalVars
               binds <- vdecs
               stTup <- statePattern globalVars
-              let body = DoE (binds:[functionCall (TupP stTup) fcall,
-                            NoBindS ((tupP2tupE . TupP) stTup)])
+              let body = DoE (binds:[functionCall (TupP stTup) fcall])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
           -- Let bindigs for variable declarations
           vdecs = do
@@ -131,6 +130,6 @@ varToPat (Variable n t) = do
 tupP2tupE :: Pat -> Exp
 tupP2tupE (TupP pats) = TupE $ map (\(SigP (VarP name) _) -> VarE name) pats
 
---concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
+concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
 concatMapM op = foldr f (return [])
     where f x xs = do x <- op x; if null x then xs else do xs <- xs; return $ x++xs
