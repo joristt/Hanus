@@ -1,16 +1,19 @@
 module AST where
 
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax hiding (Type) 
 
 newtype Program = Program [Declaration]
 
 data Declaration = GlobalVarDeclaration Variable
                  | Procedure Identifier [Variable] Block
 
+data Type = Int | String
+
 data Variable = Variable Identifier Type
 
 newtype Identifier = Identifier String
               
+--data LHS = LHSVariable Variable
 data LHS = LHSIdentifier Identifier
          | LHSArray LHS Exp
          | LHSField LHS Identifier
