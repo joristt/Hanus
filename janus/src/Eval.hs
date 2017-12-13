@@ -89,7 +89,7 @@ evalProcedure globalArgs (Procedure n vs b) = do
     return $ FunD name [Clause [pattern] body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody :: Foldable t => t Statement -> Pat -> Q Body
+evalProcedureBody :: [Statement] -> Pat -> Q Body
 evalProcedureBody ss pattern = do
     x <- concatMapM evalStatement ss
     return $ NormalB $ DoE $ x ++ [returnTup]
