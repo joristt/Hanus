@@ -65,6 +65,7 @@ evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
     let name = namify n
     return $ LetS [ValD (VarP name) (NormalB e) []]
 
+evalProcedure :: [Pat] -> Declaration -> Q Dec
 evalProcedure globalArgs (Procedure n vs b) = do
     let name = namify n
     inputArgs <- mapM varToPat vs
@@ -73,10 +74,12 @@ evalProcedure globalArgs (Procedure n vs b) = do
     return $ FunD name [Clause [pattern] body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
+evalProcedureBody :: Foldable t => t Statement -> Pat -> Body
 evalProcedureBody ss pattern = do
     NormalB $ DoE $ (concatMap evalStatement ss) ++ [returnTup]
         where returnTup = NoBindS $ tupP2tupE pattern
 
+evalStatement :: Statement -> [Stmt]
 evalStatement (Assignement lhss expr) = evalAssignments lhss expr
 evalStatement _ = error "Only Assignment can be evaluated at the moment."
 
