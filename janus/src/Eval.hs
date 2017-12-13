@@ -33,17 +33,12 @@ evalProgram (Program decls) = do
           filterProcs dec = case dec of 
                                 Procedure _ _ _ -> True
                                 otherwise       -> False
-          -- generates the program entry point; a function of the following form:
-          -- run = do
-          --    let globalVar1 = ...
-          --    let globalVar2 = ...
-          --    (globalVar1, globalVar2, ... ) = main globalVar1 globalVar2 ...
-          --    return (globalVar1, globalVar2, ...)
+          -- generates the program entry point
           entry = do
               fcall <- getMain globalVars
               binds <- vdecs
               stTup <- statePattern globalVars
-              let body = DoE (binds:[functionCall (TupP stTup) fcall])
+              let body = DoE (binds:[NoBindS fcall])
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
           -- Let bindigs for variable declarations
           vdecs = do
@@ -89,7 +84,7 @@ evalProcedure globalArgs (Procedure n vs b) = do
     return $ FunD name [Clause [pattern] body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody :: Foldable t => t Statement -> Pat -> Q Body
+--evalProcedureBody :: Statement -> Pat -> Q Body
 evalProcedureBody ss pattern = do
     x <- concatMapM evalStatement ss
     return $ NormalB $ DoE $ x ++ [returnTup]
