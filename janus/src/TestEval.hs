@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 
 module TestEval where
 
@@ -11,3 +11,5 @@ $(evalProgram p)
 --typetest = $(typeTest Int)
 --test  = $(getVal 10)
 --test2 = $(evalDeclaration (GlobalVarDeclaration (Variable (Identifier "a") Int)))
+
+main = (+) 10

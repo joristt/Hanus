@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-} 
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-} 
 
 module Eval where
 
@@ -17,7 +17,7 @@ evalProgram (Program decls) = do
         x  <- entry
         pt <- statePattern globalVars
         fdecs <- mapM (evalProcedure pt) procedures
-        return (x:fdecs)
+        return $ (x:fdecs)
     where globalVars = filter filterVars decls
           procedures = filter filterProcs decls
           filterVars dec  = case dec of 
@@ -28,8 +28,17 @@ evalProgram (Program decls) = do
                                 otherwise       -> False
           entry = do
               fcall <- getMain globalVars
-              let body = (DoE [NoBindS fcall])
+              binds <- vdecs
+              let body = (DoE (binds:[NoBindS fcall]))
               return (FunD (mkName "run") [Clause [] (NormalB body) []])
+          vdecs = do
+              decs <- mapM genDec globalVars
+              return (LetS decs)
+
+genDec :: Declaration -> Q Dec
+genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
+    name <- shadow ident
+    return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
