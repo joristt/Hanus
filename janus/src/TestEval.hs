@@ -10,4 +10,4 @@ import Language.Haskell.TH.Syntax
 --test  = $(getVal 10)
 --test2 = $(evalDeclaration (GlobalVarDeclaration (Variable (Identifier "a") Int)))
 
-$(evalProgram p)
+$(evalProgram (progFromExp (LitE (IntegerL 10))))
