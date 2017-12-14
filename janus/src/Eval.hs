@@ -3,15 +3,20 @@
 module Eval where
 
 import AST
+
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
-import Data.Maybe
+
 import Control.Monad
+import Control.Monad.State
+
 import qualified Data.Map as Map
+import Data.Maybe
 
 import qualified Debug.Trace as Debug
 
 type StatePatterns = Map.Map Identifier [Pat]
+type Context = (Map.Map Name Name, StatePatterns)
 
 -- Simple test program
 globvartype = ConT $ mkName "Int"
@@ -48,8 +53,8 @@ evalProgram p@(Program decls) = do
 
 -- generate a let statement from pattern and expression of the form
 -- let *pat* = *exp* to be used in do expressions
-functionCall :: Pat -> Exp -> Stmt
-functionCall pattern exp = LetS [ValD pattern (NormalB exp) []]
+letStmt :: Pat -> Exp -> Stmt
+letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
@@ -116,12 +121,13 @@ evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
 
 evalFunctionCall :: StatePatterns -> String -> [LHS] -> Q [Stmt]
 evalFunctionCall stPatterns name args = do
-    let rPat = TupP pattern
+    let returnP = TupP pattern
+    tmpName <- newName "tmp"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
          ((VarE . mkName) name) pattern
-    return [(functionCall rPat f)] 
+    return [letStmt (VarP tmpName) f, letStmt returnP (VarE tmpName)] 
     where pattern = case Map.lookup (Identifier name) stPatterns of
                         (Just pat) -> pat
                         Nothing    -> error "call to unknown function" 
