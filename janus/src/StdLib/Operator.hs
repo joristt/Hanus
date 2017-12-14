@@ -9,7 +9,7 @@ inverseOf :: Operator a b -> (a -> b -> a) -> Operator a b
 inverseOf (Operator f _) g = Operator g f
 
 (+=), (-=) :: (Num a) => Operator a a
-(+=) = inverseOf (-=) (+)
+(+=) = Operator (+) (-)
 (-=) = inverseOf (+=) (-)
 
 (^=) :: (Bits a) => Operator a a

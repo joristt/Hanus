@@ -5,6 +5,7 @@ module TestEval where
 import AST
 import Eval
 import Language.Haskell.TH.Syntax
+import StdLib.Operator
 
 --typetest = $(typeTest Int)
 --test  = $(getVal 10)

@@ -3,6 +3,7 @@
 module Eval where
 
 import AST
+import StdLib.Operator
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
@@ -18,12 +19,21 @@ import qualified Debug.Trace as Debug
 type StatePatterns = Map.Map Identifier [Pat]
 type Context = (Map.Map Name Name, StatePatterns)
 
--- Simple test program
+-- Simple test program. 
+-- int glob_var1 == 10
+-- int glob_var2 == 1
+-- 
+-- procedure main 
+--     call switch
+-- 
+-- procedure switch 
+--     glob_var1 += glob_var2
+-- 
 globvartype = ConT $ mkName "Int"
-globvar = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
-proc1 = Procedure (Identifier "main") [] [Call (Identifier "add10") []]
-proc2 = Procedure (Identifier "add10") [] [(Assignement [LHSIdentifier (Identifier "glob_var1")] (LitE (IntegerL 10)))]
-p = Program [globvar, proc1, proc2]
+globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
+globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 10))
+proc2 = Procedure (Identifier "main") [] [(Assignement "-=" [LHSIdentifier (Identifier "glob_var1")] (LitE (IntegerL 10)))]
+p = Program [globvar1, proc2]
 
 -- Evaluate a given program by generating a 'run' function that calls the 'main' procedure of the program. 
 evalProgram :: Program -> Q [Dec]
@@ -97,37 +107,32 @@ evalProcedureBody stPatterns ss pattern = do
         where returnTup = NoBindS $ tupP2tupE pattern
 
 evalStatement :: StatePatterns -> Statement -> Q [Stmt]
-evalStatement _ (Assignement lhss expr)             = evalAssignments lhss expr
+evalStatement _ (Assignement op lhss expr)             = evalAssignments op lhss expr
 evalStatement stPatterns (Call (Identifier i) args) = evalFunctionCall stPatterns i args
 evalStatement _ _ = error "Only Assignment can be evaluated at the moment."
 
-evalAssignments :: [LHS] -> Exp -> Q [Stmt]
-evalAssignments lhss expr = concatMapM (\lhs -> evalAssignment lhs expr) lhss
+evalAssignments :: String -> [LHS] -> Exp -> Q [Stmt]
+evalAssignments op lhss expr = concatMapM (\lhs -> evalAssignment op lhs expr) lhss
 
-evalAssignment :: LHS -> Exp -> Q [Stmt]
-evalAssignment (LHSIdentifier n) expr = do
-    -- you can't do: "let x = x + 5", instead you have
-    -- to do "let y = x + 5; let x = y"
-    let op        = VarE (mkName "+")
-    tempname     <- newName "a"
-    let finalname = namify n
-    let lhs2      = VarP $ namify n
-    let rhs1      = NormalB $ UInfixE (VarE finalname) op expr
-    let rhs2      = NormalB $ (VarE tempname)
-    let stmt1     = LetS [ValD (VarP tempname) rhs1 []]
-    let stmt2     = LetS [ValD (VarP finalname) rhs2 []]
-    return [stmt1, stmt2]
-evalAssignment _ _ = error "Only LHSIdentifier can be evaluated at the moment."
+evalAssignment :: String -> LHS -> Exp -> Q [Stmt]
+evalAssignment op (LHSIdentifier n) lhs = do
+    let f = (VarE . mkName) op
+    let x = namify n
+    op' <- [|(\(Operator fwd _) -> fwd)|]
+    let fApp = AppE (AppE (AppE op' f) (VarE x)) lhs
+    tmpN <- newName "tmp"
+    return [letStmt (VarP tmpN) fApp, letStmt (VarP x) (VarE tmpN)]
+evalAssignment _ _ _ = error "Only LHSIdentifier can be evaluated at the moment."
 
 evalFunctionCall :: StatePatterns -> String -> [LHS] -> Q [Stmt]
 evalFunctionCall stPatterns name args = do
     let returnP = TupP pattern
-    tmpName <- newName "tmp"
+    tmpN <- newName "tmp"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
          ((VarE . mkName) name) pattern
-    return [letStmt (VarP tmpName) f, letStmt returnP (VarE tmpName)] 
+    return [letStmt (VarP tmpN) f, letStmt returnP (VarE tmpN)] 
     where pattern = case Map.lookup (Identifier name) stPatterns of
                         (Just pat) -> pat
                         Nothing    -> error "call to unknown function" 
