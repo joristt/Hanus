@@ -26,9 +26,7 @@ keywords =
     "else",
     "fi",
     "local",
-    "delocal",
-
-
+    "delocal"
   ]
 
 parseFile :: FilePath -> IO Program
@@ -76,8 +74,6 @@ pNonEmptyArgumentList = addLength 10 (do
       ")" -> return [var]
       "," -> (var :) <$> pNonEmptyArgumentList `micro` 1
   )
-
-keywords = ["if"]
 
 pIdentifier :: Parser Identifier
 pIdentifier = addLength 1 (do
