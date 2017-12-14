@@ -12,6 +12,25 @@ import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Utils
 import Language.Haskell.TH.Syntax
 
+keywords = 
+  [
+    "procedure",
+    "call",
+    "uncall",
+    "from",
+    "do",
+    "until",
+    "loop",
+    "if", 
+    "then",
+    "else",
+    "fi",
+    "local",
+    "delocal",
+
+
+  ]
+
 parseFile :: FilePath -> IO Program
 parseFile file = do
                     content <- readFile file
