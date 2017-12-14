@@ -19,21 +19,28 @@ import qualified Debug.Trace as Debug
 type StatePatterns = Map.Map Identifier [Pat]
 type Context = (Map.Map Name Name, StatePatterns)
 
--- Simple test program. 
--- int glob_var1 == 10
--- int glob_var2 == 1
+-- Example program AST
+-- -------------------------------
+--
+-- int glob_var1 = 10
+-- int glob_var2 = 1
 -- 
--- procedure main 
---     call switch
+-- procedure main
+--     glob_var2 += 10
+--     call substract
 -- 
--- procedure switch 
---     glob_var1 += glob_var2
+-- procedure substract
+--     glob_var1 -= glob_var2
+--     
+-- -------------------------------
+-- Result: (-1,11)
 -- 
 globvartype = ConT $ mkName "Int"
 globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
-globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 10))
-proc2 = Procedure (Identifier "main") [] [(Assignement "-=" [LHSIdentifier (Identifier "glob_var1")] (LitE (IntegerL 10)))]
-p = Program [globvar1, proc2]
+globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 1))
+proc1 = Procedure (Identifier "main") [] [Assignement "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "substract") []]
+proc2 = Procedure (Identifier "substract") [] [(Assignement "-=" [LHSIdentifier (Identifier "glob_var1")] ((VarE . mkName) "glob_var2"))]
+p = Program [globvar1, globvar2, proc1, proc2]
 
 -- Evaluate a given program by generating a 'run' function that calls the 'main' procedure of the program. 
 evalProgram :: Program -> Q [Dec]
@@ -97,7 +104,7 @@ evalProcedure stPatterns globalArgs (Procedure n vs b) = do
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
     body <- evalProcedureBody stPatterns b pattern
-    return $ FunD name [Clause [pattern] body []]
+    return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 evalProcedureBody :: StatePatterns -> [Statement] -> Pat -> Q Body
