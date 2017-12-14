@@ -61,13 +61,14 @@ pNonEmptyArgumentList = addLength 10 (do
 keywords = ["if"]
 
 pIdentifier :: Parser Identifier
-pIdentifier = do
+pIdentifier = addLength 1 (do
     name <- (:) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
     if name `elem` keywords then do
         pSatisfy (== 'a') (Insertion "identifier" 'a' 1)
         return $ Identifier $ name ++ "a"
     else
         return $ Identifier $ name
+  )
   where
     validChar t = 'a' <= t && t <= 'z'
 
@@ -106,17 +107,14 @@ pAssignement :: Parser Statement
 pAssignement = (\x y z->Assignement y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
-pOperator = pToken "+="
-
-pOperator' :: Parser String
-pOperator' = (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
+pOperator = (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
   where
     -- ':' cannot be the first char as it can only be used for constructor operators
     validChars = ':' : firstChar
     firstChar = "!#$%&*+./<=>?@\\^|-~"
 
 pSomeLHS :: Parser [LHS]
-pSomeLHS = (:) <$> pLHS <*> pMany (pSomeSpace *> pLHS)
+pSomeLHS = (:) <$> pLHS <*> pList_ng (pSomeSpace *> pLHS)
 
 pLHS :: Parser LHS
 pLHS = pGreedyChoice [
