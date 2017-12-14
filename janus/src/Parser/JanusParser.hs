@@ -28,6 +28,9 @@ parser1 p s = case execParser p s of
     (a, [])   -> a
     (_, e:es) -> error $ "Parsing failed. First error:\n" ++ show e
 
+pSomeSpace :: Parser String
+pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) <*> pSpaces
+
 pKey keyw = pToken keyw `micro` 1 <* spaces
 spaces :: Parser String
 spaces = pMunch (`elem` " \n")
@@ -38,7 +41,6 @@ pGreedyChoice [] = pFail
 pProgram :: Parser Program
 pProgram = Program <$ pSpaces <*> pList pDeclaration
 
-
 pDeclaration :: Parser Declaration
 pDeclaration = (pProcedure <<|> pGlobalVariableDeclaration ) <* pSpaces
 
@@ -46,7 +48,7 @@ pGlobalVariableDeclaration :: Parser Declaration
 pGlobalVariableDeclaration = GlobalVarDeclaration <$> (fst <$> pVariable [";"]) <* pSpaces
 
 pVariable :: [String] -> Parser (Variable, String)
-pVariable final = (\name (t, sep) -> (Variable name t, sep)) <$> pIdentifier <* pSpaces <* pKey "::" <*> pType final
+pVariable final = (\name (t, sep) -> (Variable name t, sep)) <$> pIdentifier <* pSpaces <* pKey "::" <* pSpaces <*> pType final
 
 pNonEmptyArgumentList :: Parser [Variable]
 pNonEmptyArgumentList = addLength 10 (do
@@ -58,16 +60,27 @@ pNonEmptyArgumentList = addLength 10 (do
   )
 
 pIdentifier :: Parser Identifier
-pIdentifier = (\h t -> Identifier (h : t)) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar <* pSpaces
+pIdentifier = (\h t -> Identifier (h : t)) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
   where
     validChar t = 'a' <= t && t <= 'z'
 
 pProcedure :: Parser Declaration
-pProcedure = Procedure <$ pKey "procedure" <* pSpaces <*> pIdentifier <* pKey "(" <*> pVariableList <* pSpaces <* pKey "{" <* pSpaces <*> pBlock <* pSpaces <* pKey "}"
+pProcedure = Procedure
+  <$  pToken "procedure"
+  <*  pSomeSpace
+  <*> pIdentifier
+  <*  pSpaces
+  <*  pKey "("
+  <*> pVariableList
+  <*  pSpaces
+  <*  pKey "{"
+  <*> pBlock
+  <*  pSpaces
+  <*  pKey "}"
             where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
 
 pBlock :: Parser Block
-pBlock = pList (pStatement)
+pBlock = pList pStatement
 
 pStatement :: Parser Statement
 pStatement = pGreedyChoice [
@@ -83,7 +96,7 @@ pStatement = pGreedyChoice [
 
 
 pAssignement :: Parser Statement
-pAssignement = (\x y z->Assignement y x z) <$>  (pList pLHS) <*> pOperator <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignement = (\x y z->Assignement y x z) <$> pSomeLHS <*> pOperator <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
 pOperator = ((++) <$> pGreedyChoice [
@@ -92,27 +105,30 @@ pOperator = ((++) <$> pGreedyChoice [
                 pKey "^"
             ]) <*> pKey "=" <* pSpaces
 
+pSomeLHS :: Parser [LHS]
+pSomeLHS = (:) <$> pLHS <*> pMany (pSomeSpace *> pLHS)
+
 pLHS :: Parser LHS
 pLHS = pGreedyChoice [
             pLHSIdentifier {-,
             pLHSArray,
             pLHSField -}
-        ] <* pSpaces
+        ]
 
 pLHSIdentifier :: Parser LHS
-pLHSIdentifier = LHSIdentifier <$> pIdentifier <* pSpaces
+pLHSIdentifier = LHSIdentifier <$> pIdentifier
 
 pLHSArray :: Parser LHS
-pLHSArray = LHSArray <$> pLHS <* (pKey "[") <*> (fst <$> pExp ["]"]) <* pSpaces
+pLHSArray = LHSArray <$> pLHS <* pSpaces <* pKey "[" <*> (fst <$> pExp ["]"])
 
 pLHSField :: Parser LHS
-pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier <* pSpaces
+pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier
 
 pCall :: Parser Statement
-pCall = Call <$ pKey "call" <*> pIdentifier <*> pMany pLHS
+pCall = Call <$ pKey "call" <* pSomeSpace <*> pIdentifier <*> pMany (pSomeSpace *> pLHS) <* pToken ";"
 
 pUncall :: Parser Statement
-pUncall = Uncall <$ pKey "uncall" <*> pIdentifier <*> pList pLHS
+pUncall = Uncall <$ pKey "uncall" <* pSomeSpace <*> pIdentifier <*> pMany (pSomeSpace *> pLHS) <* pToken ";"
 
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
@@ -121,8 +137,8 @@ pLocalVariable = LocalVarDeclaration <$ pKey "local" <*>
                     pKey "delocal" <*> (fst <$> pExp [";"])
 
 pIf :: Parser Statement
-pIf = If <$ pToken "if" <* pSpaces
-  <*> (fst <$> pExp ["then"]) <* pSpaces <*> pBlock <* pSpaces
+pIf = If <$ pToken "if" <* pSomeSpace
+  <*> (fst <$> pExp ["then"]) <* pSomeSpace <*> pBlock <* pSpaces
   <*> pElse <* pSpaces <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
   where
     pElse = 
