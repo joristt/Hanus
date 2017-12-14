@@ -31,9 +31,8 @@ parser1 p s = case execParser p s of
 pSomeSpace :: Parser String
 pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) <*> pSpaces
 
-pKey keyw = pToken keyw `micro` 1 <* spaces
-spaces :: Parser String
-spaces = pMunch (`elem` " \n")
+pKey :: String -> Parser String
+pKey keyw = pToken keyw `micro` 1 <* pSpaces
 
 pGreedyChoice (x:xs) = x <<|> (pGreedyChoice xs)
 pGreedyChoice [] = pFail
@@ -48,7 +47,7 @@ pGlobalVariableDeclaration :: Parser Declaration
 pGlobalVariableDeclaration = GlobalVarDeclaration <$> (fst <$> pVariable [";"]) <* pSpaces
 
 pVariable :: [String] -> Parser (Variable, String)
-pVariable final = (\name (t, sep) -> (Variable name t, sep)) <$> pIdentifier <* pSpaces <* pKey "::" <* pSpaces <*> pType final
+pVariable final = (\name (t, sep) -> (Variable name t, sep)) <$> pIdentifier <* pSpaces <* pKey "::" <*> pType final
 
 pNonEmptyArgumentList :: Parser [Variable]
 pNonEmptyArgumentList = addLength 10 (do
@@ -59,8 +58,16 @@ pNonEmptyArgumentList = addLength 10 (do
       "," -> (var :) <$> pNonEmptyArgumentList `micro` 1
   )
 
+keywords = ["if"]
+
 pIdentifier :: Parser Identifier
-pIdentifier = (\h t -> Identifier (h : t)) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
+pIdentifier = do
+    name <- (:) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
+    if name `elem` keywords then do
+        pSatisfy (== 'a') (Insertion "identifier" 'a' 1)
+        return $ Identifier $ name ++ "a"
+    else
+        return $ Identifier $ name
   where
     validChar t = 'a' <= t && t <= 'z'
 
@@ -96,14 +103,17 @@ pStatement = pGreedyChoice [
 
 
 pAssignement :: Parser Statement
-pAssignement = (\x y z->Assignement y x z) <$> pSomeLHS <*> pOperator <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignement = (\x y z->Assignement y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
-pOperator = ((++) <$> pGreedyChoice [
-                pKey "+",
-                pKey "-",
-                pKey "^"
-            ]) <*> pKey "=" <* pSpaces
+pOperator = pToken "+="
+
+pOperator' :: Parser String
+pOperator' = (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
+  where
+    -- ':' cannot be the first char as it can only be used for constructor operators
+    validChars = ':' : firstChar
+    firstChar = "!#$%&*+./<=>?@\\^|-~"
 
 pSomeLHS :: Parser [LHS]
 pSomeLHS = (:) <$> pLHS <*> pMany (pSomeSpace *> pLHS)
