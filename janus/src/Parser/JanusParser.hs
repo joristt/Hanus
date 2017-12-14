@@ -75,17 +75,20 @@ pNonEmptyArgumentList = addLength 10 (do
       "," -> (var :) <$> pNonEmptyArgumentList `micro` 1
   )
 
-pIdentifier :: Parser Identifier
-pIdentifier = addLength 1 (do
+pName :: Parser String
+pName = addLength 1 (do
     name <- (:) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
     if name `elem` keywords then do
         pSatisfy (== 'a') (Insertion "identifier" 'a' 1)
-        return $ Identifier $ name ++ "a"
+        return $ name ++ "a"
     else
-        return $ Identifier $ name
+        return $ name
   )
   where
     validChar t = 'a' <= t && t <= 'z'
+
+pIdentifier :: Parser Identifier
+pIdentifier = Identifier <$> pName
 
 pProcedure :: Parser Declaration
 pProcedure = Procedure
@@ -106,23 +109,28 @@ pBlock :: Parser Block
 pBlock = pList pStatement
 
 pStatement :: Parser Statement
-pStatement = pGreedyChoice [
-                    pAssignement,
+pStatement
+  =   pAssignement
+  <|> pCall
+  <|> pPrefixOperatorAssignment
+  <|> pIf
+  <|> pLoop
+  <|> pLocalVariable
+    {- pGreedyChoice [
+                    -- pAssignement,
                     pCall,
-                    pUncall,
                     pIf,
                     pLoop,
                     pLocalVariable
-                ]
-
-
-
+                ] -}
 
 pAssignement :: Parser Statement
-pAssignement = (\x y z->Assignement y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignement = (\x y z -> Assignement y x (Just z)) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
-pOperator = (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
+pOperator = 
+    (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
+    <|> pSym '`' *> pName <* pSym '`'
   where
     -- ':' cannot be the first char as it can only be used for constructor operators
     validChars = ':' : firstChar
@@ -147,11 +155,11 @@ pLHSArray = LHSArray <$> pLHS <* pSpaces <* pKey "[" <*> (fst <$> pExp ["]"])
 pLHSField :: Parser LHS
 pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier
 
-pCall :: Parser Statement
-pCall = Call <$ pKey "call" <* pSomeSpace <*> pIdentifier <*> pMany (pSomeSpace *> pLHS) <* pToken ";"
+pPrefixOperatorAssignment :: Parser Statement
+pPrefixOperatorAssignment = Assignement <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing
 
-pUncall :: Parser Statement
-pUncall = Uncall <$ pKey "uncall" <* pSomeSpace <*> pIdentifier <*> pMany (pSomeSpace *> pLHS) <* pToken ";"
+pCall :: Parser Statement
+pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";"
 
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
