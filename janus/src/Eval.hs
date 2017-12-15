@@ -16,6 +16,8 @@ import Data.Maybe
 
 import qualified Debug.Trace as Debug
 
+trace x = Debug.trace (show x) x
+
 type StatePatterns = Map.Map Identifier [Pat]
 type Context = (Map.Map Name Name, StatePatterns)
 
@@ -27,6 +29,7 @@ type Context = (Map.Map Name Name, StatePatterns)
 -- 
 -- procedure main
 --     glob_var2 += 10
+--     call substract
 --     call substract
 -- 
 -- procedure substract
@@ -109,14 +112,15 @@ evalProcedure stPatterns globalArgs (Procedure n vs b) = do
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 evalProcedureBody :: StatePatterns -> [Statement] -> Pat -> Q Body
 evalProcedureBody stPatterns ss pattern = do
-    x <- concatMapM (evalStatement stPatterns) ss
+    x <- concatMapM (evalStatement stPatterns pattern) ss
     return $ NormalB $ DoE $ x ++ [returnTup]
         where returnTup = NoBindS $ tupP2tupE pattern
 
-evalStatement :: StatePatterns -> Statement -> Q [Stmt]
-evalStatement _ (Assignement op lhss expr)             = evalAssignments op lhss expr
-evalStatement stPatterns (Call (Identifier i) args) = evalFunctionCall stPatterns i args
-evalStatement _ _ = error "Only Assignment can be evaluated at the moment."
+evalStatement :: StatePatterns -> Pat -> Statement -> Q [Stmt]
+evalStatement _ _ (Assignement op lhss expr)          = evalAssignments op lhss expr
+evalStatement stPatterns _ (Call (Identifier i) args) = evalFunctionCall stPatterns i args
+evalStatement stPatterns p (If exp tb eb _)           = undefined
+evalStatement _ _ _ = error "Only Assignment can be evaluated at the moment."
 
 evalAssignments :: String -> [LHS] -> Exp -> Q [Stmt]
 evalAssignments op lhss expr = concatMapM (\lhs -> evalAssignment op lhs expr) lhss
@@ -143,6 +147,18 @@ evalFunctionCall stPatterns name args = do
     where pattern = case Map.lookup (Identifier name) stPatterns of
                         (Just pat) -> pat
                         Nothing    -> error "call to unknown function" 
+
+evalIf :: StatePatterns -> Exp -> [Statement] -> [Statement] -> Pat -> Q [Stmt]
+evalIf stPatterns g tb eb pattern = do
+    b1   <- evalBranch tb
+    b2   <- evalBranch eb
+    tmpN <- newName "tmp"
+    let ifExp  = CondE g b1 b2
+    let ifStmt = letStmt (VarP tmpN) ifExp
+    return $ [ifStmt, letStmt pattern (VarE tmpN)]
+    where evalBranch branch = do 
+            stmts <- concatMapM (evalStatement stPatterns pattern) branch
+            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
 
 -- *** HELPERS *** ---
 
