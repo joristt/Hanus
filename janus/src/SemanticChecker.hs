@@ -1,90 +1,107 @@
 module SemanticChecker (extractVarsE, semanticCheck) where
 
-import Data.List ((\\), nub)
-import Language.Haskell.TH.Syntax
-import AST
+import           AST
+import           Data.List                  (nub, (\\))
+import           Language.Haskell.TH.Syntax
 
 semanticCheck :: Program -> Bool
-semanticCheck (Program decls) = all semanticCheckD decls
+semanticCheck prog = and [check prog | check <- [ mainExists
+                                                , rhsCheck
+                                                ]]
 
-semanticCheckD :: Declaration -> Bool
-semanticCheckD (Procedure _ _ stmts) = semanticCheckB stmts
-semanticCheckD _ = True
+-- | Check that main exists.
+mainExists :: Program -> Bool
+mainExists (Program decls) =
+  "main" `elem` foldl1 (++) (map getProcName decls)
+  where getProcName :: Declaration -> [String]
+        getProcName (Procedure (Identifier name) _ _) = [name]
+        getProcName _                                 = []
 
-semanticCheckB :: Block -> Bool
-semanticCheckB = all semanticCheckS
+-- | Check that variables on the LHS does not appear on the RHS.
+rhsCheck :: Program -> Bool
+rhsCheck (Program decls) = all rhsCheckD decls
 
-semanticCheckS :: Statement -> Bool
-semanticCheckS (Assignement _ lh e) =
-  all (`notElem` eVars) (map lhsToId lh)
-  where eVars = extractVarsE e
-        lhsToId :: LHS -> String
-        lhsToId (LHSIdentifier (Identifier name)) = name
-        lhsToId (LHSArray lhs _) = lhsToId lhs
-        lhsToId (LHSField lhs _) = lhsToId lhs
-semanticCheckS (If _ b b' _) = all semanticCheckB [b, b']
-semanticCheckS (LoopUntil _ b b' _) = all semanticCheckB [b, b']
-semanticCheckS (LocalVarDeclaration _ _ b _) = semanticCheckB b
-semanticCheckS _ = True
+rhsCheckD :: Declaration -> Bool
+rhsCheckD (Procedure _ _ stmts) = rhsCheckB stmts
+rhsCheckD _                     = True
 
+rhsCheckB :: Block -> Bool
+rhsCheckB = all rhsCheckS
+
+rhsCheckS :: Statement -> Bool
+rhsCheckS stmt = case stmt of
+  (Assignement _ lh e) ->
+    all (`notElem` eVars) (map lhsToId lh)
+    where eVars = extractVarsE e
+          lhsToId :: LHS -> String
+          lhsToId (LHSIdentifier (Identifier name)) = name
+          lhsToId (LHSArray lhs _)                  = lhsToId lhs
+          lhsToId (LHSField lhs _)                  = lhsToId lhs
+  (If _ b b' _) -> all rhsCheckB [b, b']
+  (LoopUntil _ b b' _) -> all rhsCheckB [b, b']
+  (LocalVarDeclaration _ _ b _) -> rhsCheckB b
+  _ -> True
+
+-- | Variable extraction.
 extractVarsE :: Exp -> [String]
 extractVarsE = nub . extractVarsE'
 extractVarsE' :: Exp -> [String]
-extractVarsE' (VarE name) = [nameBase name]
-extractVarsE' (AppE e e') = concatVarsE [e, e']
-extractVarsE' (InfixE lhs op rhs) =
-  case (lhs, rhs) of
-    (Just lhs, Just rhs) -> concatVarsE [lhs, op, rhs]
-    (Nothing, Just rhs) -> concatVarsE [op, rhs]
-    (Just lhs, Nothing) -> concatVarsE [lhs, op]
-    _ -> []
-extractVarsE' (UInfixE e e' e'') = concatVarsE [e, e', e'']
-extractVarsE' (ParensE e) = extractVarsE' e
-extractVarsE' (LamE pats e) =
-  extractVarsE' e \\ foldl1 (++) (map extractVarsP pats)
-extractVarsE' (LamCaseE _) =
-  error "GHC extension 'LambdaCase' not supported."
-extractVarsE' (TupE es) = concatVarsE es
-extractVarsE' (UnboxedTupE es) = concatVarsE es
-extractVarsE' (CondE g e e') = concatVarsE [g, e, e']
-extractVarsE' (MultiIfE _) =
-  error "GHC extension 'MultiWayIf' not supported."
-extractVarsE' (LetE _ _) =
-  error "Let expressions not supported."
-extractVarsE' (CaseE _ _) =
-  error "Case expressions not supported."
-extractVarsE' (DoE _) =
-  error "Do expressions not supported."
-extractVarsE' (CompE _) =
-  error "Comprehension expressions not supported."
-extractVarsE' (ArithSeqE range) =
-  concatVarsE $ case range of
-    FromR e -> [e]
-    FromThenR e e' -> [e, e']
-    FromToR e e' -> [e, e']
-    FromThenToR e e' e'' -> [e, e', e'']
-extractVarsE' (ListE es) = concatVarsE es
-extractVarsE' (SigE e _) = extractVarsE' e
-extractVarsE' (RecConE _ fieldExps) =
-  concatVarsE $ map snd fieldExps
-extractVarsE' (RecUpdE e fieldExps) =
-  concatVarsE $ e : map snd fieldExps
-extractVarsE' (StaticE e) = extractVarsE' e
-extractVarsE' (UnboundVarE name) = [nameBase name]
-extractVarsE' _ = []
+extractVarsE' e = case e of
+  (VarE name) -> [nameBase name]
+  (AppE e e') -> concatVarsE [e, e']
+  (InfixE lhs op rhs) ->
+    case (lhs, rhs) of
+      (Just lhs, Just rhs) -> concatVarsE [lhs, op, rhs]
+      (Nothing, Just rhs)  -> concatVarsE [op, rhs]
+      (Just lhs, Nothing)  -> concatVarsE [lhs, op]
+  (UInfixE e e' e'') -> concatVarsE [e, e', e'']
+  (ParensE e) -> extractVarsE' e
+  (LamE pats e) ->
+    extractVarsE' e \\ foldl1 (++) (map extractVarsP pats)
+  (LamCaseE _) ->
+    error "GHC extension 'LambdaCase' not supported."
+  (TupE es) -> concatVarsE es
+  (UnboxedTupE es) -> concatVarsE es
+  (CondE g e e') -> concatVarsE [g, e, e']
+  (MultiIfE _) ->
+    error "GHC extension 'MultiWayIf' not supported."
+  (LetE _ _) ->
+    error "Let expressions not supported."
+  (CaseE _ _) ->
+    error "Case expressions not supported."
+  (DoE _) ->
+    error "Do expressions not supported."
+  (CompE _) ->
+    error "Comprehension expressions not supported."
+  (ArithSeqE range) ->
+    concatVarsE $ case range of
+      FromR e              -> [e]
+      FromThenR e e'       -> [e, e']
+      FromToR e e'         -> [e, e']
+      FromThenToR e e' e'' -> [e, e', e'']
+  (ListE es) -> concatVarsE es
+  (SigE e _) -> extractVarsE' e
+  (RecConE _ fieldExps) ->
+    concatVarsE $ map snd fieldExps
+  (RecUpdE e fieldExps) ->
+    concatVarsE $ e : map snd fieldExps
+  (StaticE e) -> extractVarsE' e
+  (UnboundVarE name) -> [nameBase name]
+  _ -> []
 
 extractVarsP :: Pat -> [String]
-extractVarsP (VarP name) = [nameBase name]
-extractVarsP (TupP pats) = concatVarsP pats
-extractVarsP (UnboxedTupP pats) = concatVarsP pats
-extractVarsP (ParensP pat) = extractVarsP pat
-extractVarsP (TildeP pat) = extractVarsP pat
-extractVarsP (BangP pat) = extractVarsP pat
-extractVarsP (AsP name pat) = nameBase name : extractVarsP pat
-extractVarsP (ListP pats) = concatVarsP pats
-extractVarsP (SigP pat _) = extractVarsP pat
-extractVarsP (ViewP _ pat) = extractVarsP pat
-extractVarsP _ = []
+extractVarsP p = case p of
+  (VarP name)        -> [nameBase name]
+  (TupP pats)        -> concatVarsP pats
+  (UnboxedTupP pats) -> concatVarsP pats
+  (ParensP pat)      -> extractVarsP pat
+  (TildeP pat)       -> extractVarsP pat
+  (BangP pat)        -> extractVarsP pat
+  (AsP name pat)     -> nameBase name : extractVarsP pat
+  (ListP pats)       -> concatVarsP pats
+  (SigP pat _)       -> extractVarsP pat
+  (ViewP _ pat)      -> extractVarsP pat
+  _                  -> []
 
 concatVars :: (a -> [String]) -> [a] -> [String]
 concatVars extF es = foldl1 (++) $ map extF es

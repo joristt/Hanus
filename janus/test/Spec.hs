@@ -45,17 +45,28 @@ varTests =
 
 semanticTests =
   [ semanticCheck progT @?= True
-  , semanticCheck progF @?= False
+  , semanticCheck progF_rhs @?= False
+  , semanticCheck progF_main @?= False
+  , semanticCheck progT' @?= True
   ]
   where progT = Program
           [ GlobalVarDeclaration $ Variable x int
-          , Procedure p [Variable y int]
-              [ Assignement "+=" [LHSIdentifier x] (VarE $ mkName "y") ]
+          , Procedure main [Variable y int] [asgT]
           ]
-        progF = Program
+        progF_rhs = Program
           [ GlobalVarDeclaration $ Variable x int
-          , Procedure p [Variable y int]
-              [ Assignement "+=" [LHSIdentifier x] (VarE $ mkName "x") ]
+          , Procedure main [Variable y int] [asgF]
           ]
-        [x, y, p] = map Identifier ["x", "y", "p"]
+        progF_main = Program
+          [ GlobalVarDeclaration $ Variable x int
+          , Procedure notMain [Variable y int] [asgT]
+          ]
+        progT' = Program
+          [ GlobalVarDeclaration $ Variable x int
+          , Procedure notMain [Variable y int] [asgT]
+          , Procedure main [Variable y int] [asgT]
+          ]
+        [x, y, main, notMain] = map Identifier ["x", "y", "main", "notMain"]
+        asgT = Assignement "+=" [LHSIdentifier x] (VarE $ mkName "y")
+        asgF = Assignement "+=" [LHSIdentifier x] (VarE $ mkName "x")
         int = ConT $ mkName "Int"
