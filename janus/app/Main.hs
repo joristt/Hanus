@@ -35,5 +35,5 @@ main = run =<< execParser (parseOptions `withInfo` "Janus DSL")
 
 -- | Run.
 run :: Options -> IO ()
-run (Options inputFile dummyInt) = do
+run (Options inputFile dummyInt) =
   putStrLn ""

@@ -11,6 +11,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     AST
+                     , QQ
                      , StdLib.ArrayIndexer
                      , StdLib.DefaultValue
                      , StdLib.FieldIndexer
@@ -41,6 +42,7 @@ test-suite janus-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       TQQ
   build-depends:       base
                      , janus
                      , test-framework
