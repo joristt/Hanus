@@ -2,7 +2,7 @@
 
 import Test.Framework (defaultMain, testGroup)
 import Test.Framework.Providers.HUnit
-import Test.HUnit
+import Test.QQ
 
 import Data.List ((\\))
 import Language.Haskell.TH
@@ -17,6 +17,7 @@ main = defaultMain
   [ constructTestSuite testName testSuite
   | (testName, testSuite) <- [ ("VAR", varTests)
                              , ("SEM", semanticTests)
+                             , ("QQ", qqTests)
                              ]
   ]
 
