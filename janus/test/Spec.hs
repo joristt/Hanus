@@ -5,8 +5,8 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit
 
 import Data.List ((\\))
-import System.IO.Unsafe (unsafePerformIO)
 import Language.Haskell.TH
+import System.IO.Unsafe (unsafePerformIO)
 
 import AST
 import SemanticChecker (extractVarsE, semanticCheck)
@@ -44,29 +44,33 @@ varTests =
   ]
 
 semanticTests =
-  [ semanticCheck progT @?= True
-  , semanticCheck progF_rhs @?= False
-  , semanticCheck progF_main @?= False
-  , semanticCheck progT' @?= True
+  [ semanticCheck progT1 @?= True
+  , semanticCheck progT2 @?= True
+  , semanticCheck progT3 @?= True
+  , semanticCheck progF_noMain @?= False
+  , semanticCheck progF1 @?= False
+  , semanticCheck progF2 @?= False
+  , semanticCheck progF3 @?= False
   ]
-  where progT = Program
-          [ GlobalVarDeclaration $ Variable x int
-          , Procedure main [Variable y int] [asgT]
-          ]
-        progF_rhs = Program
-          [ GlobalVarDeclaration $ Variable x int
-          , Procedure main [Variable y int] [asgF]
-          ]
-        progF_main = Program
-          [ GlobalVarDeclaration $ Variable x int
-          , Procedure notMain [Variable y int] [asgT]
-          ]
-        progT' = Program
-          [ GlobalVarDeclaration $ Variable x int
-          , Procedure notMain [Variable y int] [asgT]
-          , Procedure main [Variable y int] [asgT]
-          ]
+  where progT1 = Program [ Procedure main [] [asgT] ]
+        progF1 = Program [ Procedure main [] [asgF1] ]
+        progF2 = Program [ Procedure main [] [asgF2] ]
+        progF3 = Program [ Procedure main [] [asgF3] ]
+        progF_noMain = Program [ Procedure notMain [] [asgT] ]
+        progT2 = Program [ Procedure main [] [asgT2] ]
+        progT3 = Program [ Procedure notMain [] [asgT]
+                         , Procedure main [] [asgT] ]
         [x, y, main, notMain] = map Identifier ["x", "y", "main", "notMain"]
-        asgT = Assignement "+=" [LHSIdentifier x] (VarE $ mkName "y")
-        asgF = Assignement "+=" [LHSIdentifier x] (VarE $ mkName "x")
+        [x', y'] = map (VarE . mkName) ["x", "y"]
         int = ConT $ mkName "Int"
+        one = LitE $ IntegerL 1
+        plus = VarE '(+)
+        index arr = InfixE (Just arr) (VarE '(!!)) (Just one)
+        asgT = LHSIdentifier x .+= y'
+        asgF1 = LHSIdentifier x .+= x'
+        asgF2 =
+          LHSArray (LHSIdentifier x) one .+=
+          InfixE (Just $ index x') plus (Just one)
+        asgF3 = LHSArray (LHSIdentifier x) (index x') .+= one
+        asgT2 = LHSArray (LHSIdentifier x) (index y') .+= one
+        (.+=) e e' = Assignment "+=" [e] (Just e')

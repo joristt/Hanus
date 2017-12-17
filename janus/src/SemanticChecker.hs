@@ -1,48 +1,58 @@
 module SemanticChecker (extractVarsE, semanticCheck) where
 
-import           AST
-import           Data.List                  (nub, (\\))
-import           Language.Haskell.TH.Syntax
+import AST
+import Data.List (nub, (\\))
+import Language.Haskell.TH.Syntax
 
 semanticCheck :: Program -> Bool
-semanticCheck prog = and [check prog | check <- [ mainExists
-                                                , rhsCheck
-                                                ]]
+semanticCheck prog =
+  and [ check prog | check <- [ mainExists, rhsCheck] ]
 
 -- | Check that main exists.
 mainExists :: Program -> Bool
 mainExists (Program decls) =
-  "main" `elem` foldl1 (++) (map getProcName decls)
-  where getProcName :: Declaration -> [String]
-        getProcName (Procedure (Identifier name) _ _) = [name]
-        getProcName _                                 = []
+  any checkMain decls
+  where
+    checkMain :: Declaration -> Bool
+    checkMain (Procedure (Identifier "main") [] _) = True
+    checkMain _                                    = False
 
 -- | Check that variables on the LHS does not appear on the RHS.
 rhsCheck :: Program -> Bool
-rhsCheck (Program decls) = all rhsCheckD decls
+rhsCheck (Program decls) =
+  all rhsCheckD decls
+  where
+    rhsCheckD :: Declaration -> Bool
+    rhsCheckD (Procedure _ _ stmts) = rhsCheckB stmts
+    rhsCheckD _                     = True
+    rhsCheckB :: Block -> Bool
+    rhsCheckB = all rhsCheckS
+    rhsCheckS :: Statement -> Bool
+    rhsCheckS stmt = case stmt of
+      (If _ b b' _) ->
+        all rhsCheckB [b, b']
+      (LoopUntil _ b b' _) ->
+        all rhsCheckB [b, b']
+      (LocalVarDeclaration _ _ b _) ->
+        rhsCheckB b
+      (Assignment _ lhs (Just e)) ->
+        all (`notElem` usedVars) names
+        where
+          (names, es) = fmap concat $ unzip $ map lhsInfo lhs
+          usedVars = concatMap extractVarsE (e:es)
+          lhsInfo :: LHS -> (String, [Exp])
+          lhsInfo lhs = case lhs of
+            (LHSIdentifier (Identifier name)) ->
+              (name, [])
+            (LHSArray lhs e) ->
+              let (name, es) = lhsInfo lhs
+              in (name, e:es)
+            (LHSField lhs (Identifier name)) ->
+              let (_, es) = lhsInfo lhs
+              in (name, es)
+      _ -> True
 
-rhsCheckD :: Declaration -> Bool
-rhsCheckD (Procedure _ _ stmts) = rhsCheckB stmts
-rhsCheckD _                     = True
-
-rhsCheckB :: Block -> Bool
-rhsCheckB = all rhsCheckS
-
-rhsCheckS :: Statement -> Bool
-rhsCheckS stmt = case stmt of
-  (Assignement _ lh e) ->
-    all (`notElem` eVars) (map lhsToId lh)
-    where eVars = extractVarsE e
-          lhsToId :: LHS -> String
-          lhsToId (LHSIdentifier (Identifier name)) = name
-          lhsToId (LHSArray lhs _)                  = lhsToId lhs
-          lhsToId (LHSField lhs _)                  = lhsToId lhs
-  (If _ b b' _) -> all rhsCheckB [b, b']
-  (LoopUntil _ b b' _) -> all rhsCheckB [b, b']
-  (LocalVarDeclaration _ _ b _) -> rhsCheckB b
-  _ -> True
-
--- | Variable extraction.
+-- | Variable extraction from Haskell expressions.
 extractVarsE :: Exp -> [String]
 extractVarsE = nub . extractVarsE'
 extractVarsE' :: Exp -> [String]
@@ -89,6 +99,7 @@ extractVarsE' e = case e of
   (UnboundVarE name) -> [nameBase name]
   _ -> []
 
+-- | Variable extraction from Haskell patterns.
 extractVarsP :: Pat -> [String]
 extractVarsP p = case p of
   (VarP name)        -> [nameBase name]
