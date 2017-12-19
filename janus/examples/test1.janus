@@ -4,4 +4,6 @@ procedure f(x::Int, y::Int->String)
 {
     x += 3;
     y ^= 1;
+    call f x y;
+    swap x y;
 }
