@@ -104,22 +104,22 @@ pBlock = pList pStatement
 
 pStatement :: Parser Statement
 pStatement
-  =   pAssignement
+  =   pAssignment
   <|> pCall
   <|> pPrefixOperatorAssignment
   <|> pIf
   <|> pLoop
   <|> pLocalVariable
     {- pGreedyChoice [
-                    -- pAssignement,
+                    -- pAssignment,
                     pCall,
                     pIf,
                     pLoop,
                     pLocalVariable
                 ] -}
 
-pAssignement :: Parser Statement
-pAssignement = (\x y z -> Assignement y x (Just z)) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignment :: Parser Statement
+pAssignment = (\x y z -> Assignment y x (Just z)) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
 pOperator = 
@@ -150,7 +150,7 @@ pLHSField :: Parser LHS
 pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignement <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing
+pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing
 
 pCall :: Parser Statement
 pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";"
