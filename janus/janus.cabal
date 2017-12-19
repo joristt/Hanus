@@ -42,6 +42,7 @@ test-suite janus-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   other-modules:       TQQ
+                     , TSemanticChecker
   build-depends:       base
                      , janus
                      , test-framework

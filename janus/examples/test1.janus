@@ -1,6 +1,6 @@
 x :: Int;
 
-procedure f(x::Int, y::Int->String)
+procedure main(x::Int, y::Int->String)
 {
     x += 3;
     y ^= 1;
