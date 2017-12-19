@@ -10,7 +10,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     AST, StdLib.ArrayIndexer, StdLib.DefaultValue, StdLib.FieldIndexer, StdLib.Operator, Parser.JanusParser
+  exposed-modules:     AST, StdLib.ArrayIndexer, StdLib.DefaultValue, StdLib.FieldIndexer, StdLib.Operator, Parser.JanusParser, Parser.HaskellParser
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , optparse-applicative
