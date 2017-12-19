@@ -58,7 +58,7 @@ instance Show Program where
 
 instance Show Declaration where
   show (GlobalVarDeclaration var) = "Decl: " ++ show var
-  show (Procedure identifier variables blocks) = "procedure " ++ show identifier ++ " (" ++ (intercalate "," $ map show variables) ++ ")\n" ++ intercalate "\n" (map show blocks)
+  show (Procedure identifier variables blocks) = "procedure " ++ show identifier ++ " (" ++ intercalate "," (map show variables) ++ ")\n" ++ intercalate "\n" (map show blocks)
 
 instance Show Variable where
   show (Variable identifier t) = show identifier ++ "::" ++ show t 
@@ -72,6 +72,6 @@ instance Show LHS where
   show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
 
 instance Show Statement where
-  show (Assignment operator lhs exp ) = (intercalate ", " $ map show lhs) ++ operator ++ show exp
-  show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ (intercalate " " $ map show lhs)
-  show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ (intercalate " " $ map show lhs)
+  show (Assignment operator lhs exp ) = intercalate ", " (map show lhs) ++ operator ++ show exp
+  show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ unwords (map show lhs)
+  show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ unwords (map show lhs)

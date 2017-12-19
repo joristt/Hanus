@@ -6,7 +6,6 @@ import Parser.HaskellParser
 import AST
 
 import Text.ParserCombinators.UU
-import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.Core
 import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Utils
@@ -45,8 +44,7 @@ pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) 
 pKey :: String -> Parser String
 pKey keyw = pToken keyw `micro` 1 <* pSpaces
 
-pGreedyChoice (x:xs) = x <<|> (pGreedyChoice xs)
-pGreedyChoice [] = pFail
+pGreedyChoice (x:xs) = foldr (<<|>) pFail xs
 
 pProgram :: Parser Program
 pProgram = Program <$ pSpaces <*> pList pDeclaration
@@ -76,7 +74,7 @@ pName = addLength 1 (do
         pSatisfy (== 'a') (Insertion "identifier" 'a' 1)
         return $ name ++ "a"
     else
-        return $ name
+        return name
   )
   where
     validChar t = 'a' <= t && t <= 'z'
@@ -147,7 +145,7 @@ pLHSArray :: Parser LHS
 pLHSArray = LHSArray <$> pLHS <* pSpaces <* pKey "[" <*> (fst <$> pExp ["]"])
 
 pLHSField :: Parser LHS
-pLHSField = LHSField <$> pLHS <* (pKey ".") <*> pIdentifier
+pLHSField = LHSField <$> pLHS <* pKey "." <*> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
 pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing
@@ -171,7 +169,7 @@ pIf = If <$ pToken "if" <* pSomeSpace
         (pToken "else" *> pBlock)
         <<|>
         -- Without 'else'
-        (return ([]))
+        return []
 
 pLoop :: Parser Statement
 pLoop = addLength 10 (do
