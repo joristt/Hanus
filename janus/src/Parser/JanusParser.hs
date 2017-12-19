@@ -29,21 +29,15 @@ keywords =
     "delocal"
   ]
 
-parseFile :: FilePath -> IO Program
-parseFile file = do
-                    content <- readFile file
-                    putStrLn $ "Source " ++ content
-                    let program = parser content
-                    putStrLn $ "Program " ++ show program
-                    return $ program
-
-parser :: String -> Program
+parser :: String -> Int -> Int -> String -> Program
 parser = parser1 pProgram
 
-parser1 :: Parser a -> String -> a
-parser1 p s = case execParser p s of
-    (a, [])   -> a
-    (_, e:es) -> error $ "Parsing failed. First error:\n" ++ show e
+parser1 :: Parser a -> String -> Int -> Int -> String -> a
+parser1 p fileName line col s = parse_h (assertNoError <$> p <*> pEnd) $ createStr (LineCol line col) s
+  where
+    assertNoError :: a -> [Error LineCol] -> a
+    assertNoError a []     = a
+    assertNoError _ (e:es) = error $ "Parsing of Janus code failed in file " ++ fileName ++ ". First error:\n" ++ show e
 
 pSomeSpace :: Parser String
 pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) <*> pSpaces
