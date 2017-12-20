@@ -28,4 +28,6 @@ cabal.project.local
 *.blg
 proposal/_minted-proposal/
 proposal/*.pdf
+intermediate/_minted-intermediate/
+intermediate/*.pdf
 
