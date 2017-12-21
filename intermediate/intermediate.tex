@@ -194,14 +194,14 @@ In this example, the Haskell statement is the string \textit{(1+2)==3}. The if s
 
 
 \subsection{Semantic Checking}
-Although most of the semantic checks we wish to perform on Janus programs is done by our beloved host language, we also implemented the following Janus-specific checks:
+Although most of the semantic checks we wish to perform on Janus programs are performed by our beloved host language, we also implemented the following Janus-specific checks:
 \begin{enumerate}
 \item There should be at least one \code{main} procedure declared.
 \item Expressions on the right-hand side of assigment statements must not use any of the variables on the left-hand side, such as \code{x += x + 1}.
 \end{enumerate}
 As we already have the privilege of staged compilation, we run the aforementioned checks during compilation time, thus informing the end-user much earlier on in the development process.
 
-Moreover, we might add more checks, as we discover possibilities along the way. For instance, we could detect certain common errors where the user has provided guards at the end of an \code{if}-statement, which cannot discriminate which branch was taken, hence rendering the statement impossible to run in reverse.
+Moreover, we might add more checks, as we discover possibilities along the way. For instance, we could detect certain common errors where the user has provided guards at the end of an \code{if}-statement, which cannot determine which of the two branches was taken, hence rendering the statement impossible to run in reverse.
 
 \section{Timeline}
 Everything, more or less, went according to our original plan, except a minor setback last week, which we will, nonetheless, cover during the forthcoming Christmas break.
@@ -212,7 +212,7 @@ On the one hand, we got a bit delayed with the implementation of the evaluation 
 
 On the other hand, we are a week ahead of schedule on allowing usage of arbitrary types, which we can contribute to our monolithic approach to feature inclusion. We expect this co-delay to cancel out the delay mentioned above.
 
-Finally, we have postponed the benchmarking setup and survey of suitable algorithms one week later, since we are more concerned in having a stable DSL, before continuing with the analysis/benchmarking part.
+Finally, we have postponed the benchmarking setup and survey of suitable algorithms one week, since we are more concerned about having a stable DSL, before continuing with the analysis/benchmarking part.
 
 \newpage
 
