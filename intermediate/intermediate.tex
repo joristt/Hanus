@@ -1,6 +1,6 @@
 \documentclass[12pt,a4paper]{article}
 
-\usepackage{minted}
+\usepackage[draft]{minted}
 
 % Tables
 \usepackage{multicol}
@@ -138,19 +138,8 @@ There are a number of risks to consider when creating a DSL, which are specified
 \subsection{Expected outcome}
 At the end of the project, we expect to have a working Janus DSL, that supports all features from the initial Janus version \cite{lutz82}. We expect to have implemented local variables and function arguments from the extended Janus version \cite{yokoyama10} and we hope to have support for arbitrary types. If we cannot implement the latter, we do not consider the project to be failed, but this makes the DSL less usable. Furthermore, the implementation should have compile-time guarantees on the reversibility of programs.
 
-To demonstrate the usability of our DSL, we compare various applications in the original version of Janus with programs written using our embedded DSL. We will compare these examples by benchmarking and the readability or style of the code. Given that our DSL can make use of the power of Haskell, we assume that programs in our DSL will be shorter and more readable. It is hard to estimate the performance of our implementation, as this depends on how well the Haskell compiler (GHC) can optimize programs written in our DSL. However, the existing interpreters for Janus do not seem to focus on optimizing performance, so the bar for our implementation is low.
-
-\section{Intermediate results}
-
-\subsection{Parser}
-For the DSL, a parser has to be implemented that can parse a string to a Janus abstract syntax tree. This parser is written using the \textit{uu-parsinglib}, a Haskell package that uses error correction. Error correction means that the parser will try to correct the input if necessary. Besides the Janus syntax that is parsed with the \textit{uu-parsinglib}, the DSL needs to support arbitrary Haskell expressions and Haskell types. The parsing of these pieces will be done by the Haskell package \textit{haskell-src-meta}. This package provides functions that will take a \textit{string} as an argument and return a Template Haskell \textit{Exp} for an expression or a Template Haskell \textit{Type} for the types. These types and expressions can cause some problems, because the function that parses an \textit{Exp} or a \textit{Type} expects a string as parameter. This means that the exact string that contains the expression or type needs to be determined. This is problematic, as there is no easy way to determine where the type or the expression ends. The way it is implemented in the parser is that it is known which character or characters are expected immediately after the expression or type. The parser parses until it finds the first terminating character that it can parse. If this is a valid parsing, the parser continues to the second character in the string that is a terminating character, continuing until the parser fails. If that happens, it backs up one step and then returns the parsed expression. An example is the Janus statement:
-	\begin{displayquote}
-		if((1+2)==3)
-	\end{displayquote}
-In this example, the Haskell statement is the string \textit{(1+2)==3}. The if statement in Janus needs parentheses around the expression. The parser knows that there should be a Haskell expression just after the first parenthesis. It starts by parsing the string \textit{(1+2} because it tries to parse without parsing the first closing parenthesis. This fails, so it continues with \textit{(1+2)==3}, which is a valid Haskell expression. This expression is then used. This way, all possible Haskell expressions are supported by the parser.
-
-\section{Timeline}
-
+To demonstrate the usability of our DSL, we compare various applications in the original version of Janus with programs written using our embedded DSL. We will compare these examples by benchmarking and the readability or style of the code. Given that our DSL can make use of the power of Haskell, we assume that programs in our DSL will be shorter and more readable. It is hard to estimate the performance of our implementation, as this depends on how well the Haskell compiler (GHC) can optimize programs written in our DSL. However, the existing interpreters for Janus do not seem to focus on optimizing performance, so 
+the bar for our implementation is low.
 
 \section{Planning}
 \setlength{\tabcolsep}{20pt}
@@ -191,6 +180,39 @@ In this example, the Haskell statement is the string \textit{(1+2)==3}. The if s
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Project Submission}}
 \end{tabular}
 \end{center}
+
+\newpage
+
+\section{Intermediate results}
+
+\subsection{Parser}
+For the DSL, a parser has to be implemented that can parse a string to a Janus abstract syntax tree. This parser is written using the \textit{uu-parsinglib}, a Haskell package that uses error correction. Error correction means that the parser will try to correct the input if necessary. Besides the Janus syntax that is parsed with the \textit{uu-parsinglib}, the DSL needs to support arbitrary Haskell expressions and Haskell types. The parsing of these pieces will be done by the Haskell package \textit{haskell-src-meta}. This package provides functions that will take a \textit{string} as an argument and return a Template Haskell \textit{Exp} for an expression or a Template Haskell \textit{Type} for the types. These types and expressions can cause some problems, because the function that parses an \textit{Exp} or a \textit{Type} expects a string as parameter. This means that the exact string that contains the expression or type needs to be determined. This is problematic, as there is no easy way to determine where the type or the expression ends. The way it is implemented in the parser is that it is known which character or characters are expected immediately after the expression or type. The parser parses until it finds the first terminating character that it can parse. If this is a valid parsing, the parser continues to the second character in the string that is a terminating character, continuing until the parser fails. If that happens, it backs up one step and then returns the parsed expression. An example is the Janus statement:
+	\begin{displayquote}
+		if((1+2)==3)
+	\end{displayquote}
+In this example, the Haskell statement is the string \textit{(1+2)==3}. The if statement in Janus needs parentheses around the expression. The parser knows that there should be a Haskell expression just after the first parenthesis. It starts by parsing the string \textit{(1+2} because it tries to parse without parsing the first closing parenthesis. This fails, so it continues with \textit{(1+2)==3}, which is a valid Haskell expression. This expression is then used. This way, all possible Haskell expressions are supported by the parser.
+
+
+\subsection{Semantic Checking}
+Although most of the semantic checks we wish to perform on Janus programs are performed by our beloved host language, we also implemented the following Janus-specific checks:
+\begin{enumerate}
+\item There should be at least one \code{main} procedure declared.
+\item Expressions on the right-hand side of assigment statements must not use any of the variables on the left-hand side, such as \code{x += x + 1}.
+\end{enumerate}
+As we already have the privilege of staged compilation, we run the aforementioned checks during compilation time, thus informing the end-user much earlier on in the development process.
+
+Moreover, we might add more checks, as we discover possibilities along the way. For instance, we could detect certain common errors where the user has provided guards at the end of an \code{if}-statement, which cannot determine which of the two branches was taken, hence rendering the statement impossible to run in reverse.
+
+\section{Timeline}
+Everything, more or less, went according to our original plan, except a minor setback last week, which we will, nonetheless, cover during the forthcoming Christmas break.
+
+Although we had originally planned to add features in an incremental fashion (e.g. having a fully-working implementation of basic Janus at first and later allow embedded Haskell expressions), we followed a more monolithic approach and started with all desired features in mind. We think this proved to be more efficient and mitigated the unnecessary overhead of refactoring a major part of the codebase with each additional feature.
+
+On the one hand, we got a bit delayed with the implementation of the evaluation step (i.e. the generation of the Haskell code that corresponds to the forward and backward version of a Janus program), since it proved to be more difficult and contain more subtle issues, than we had anticipated.
+
+On the other hand, we are a week ahead of schedule on allowing usage of arbitrary types, which we can contribute to our monolithic approach to feature inclusion. We expect this co-delay to cancel out the delay mentioned above.
+
+Finally, we have postponed the benchmarking setup and survey of suitable algorithms one week, since we are more concerned about having a stable DSL, before continuing with the analysis/benchmarking part.
 
 \newpage
 
