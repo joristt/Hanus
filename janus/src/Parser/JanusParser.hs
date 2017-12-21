@@ -38,13 +38,14 @@ parser1 p fileName line col s = parse_h (assertNoError <$> p <*> pEnd) $ createS
     assertNoError a []     = a
     assertNoError _ (e:es) = error $ "Parsing of Janus code failed in file " ++ fileName ++ ". First error:\n" ++ show e
 
+parser2 :: Parser a -> String -> a
+parser2 p s = parser1 p "input" 0 0 s
+
 pSomeSpace :: Parser String
 pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) <*> pSpaces
 
 pKey :: String -> Parser String
 pKey keyw = pToken keyw `micro` 1 <* pSpaces
-
-pGreedyChoice (x:xs) = foldr (<<|>) pFail xs
 
 pProgram :: Parser Program
 pProgram = Program <$ pSpaces <*> pList pDeclaration
@@ -108,13 +109,6 @@ pStatement
   <|> pIf
   <|> pLoop
   <|> pLocalVariable
-    {- pGreedyChoice [
-                    -- pAssignment,
-                    pCall,
-                    pIf,
-                    pLoop,
-                    pLocalVariable
-                ] -}
 
 pAssignment :: Parser Statement
 pAssignment = (\x y z -> Assignment y x (Just z)) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
@@ -132,11 +126,9 @@ pSomeLHS :: Parser [LHS]
 pSomeLHS = (:) <$> pLHS <*> pList_ng (pSomeSpace *> pLHS)
 
 pLHS :: Parser LHS
-pLHS = pGreedyChoice [
-            pLHSIdentifier {-,
-            pLHSArray,
-            pLHSField -}
-        ]
+pLHS = pLHSIdentifier {-
+    <|> pLHSArray
+    <|> pLHSField -}
 
 pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier
@@ -148,10 +140,10 @@ pLHSField :: Parser LHS
 pLHSField = LHSField <$> pLHS <* pKey "." <*> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing
+pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing <* pSpaces
 
 pCall :: Parser Statement
-pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";"
+pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <* pSpaces
 
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
@@ -163,6 +155,7 @@ pIf :: Parser Statement
 pIf = If <$ pToken "if" <* pSomeSpace
   <*> (fst <$> pExp ["then"]) <* pSomeSpace <*> pBlock <* pSpaces
   <*> pElse <* pSpaces <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
+  <* pSpaces
   where
     pElse = 
         -- With 'else'
@@ -182,7 +175,7 @@ pLoop = addLength 10 (do
         "loop" -> (\(b, e) -> ([], b, e)) <$> pLoopAfterLoop
         "until" -> (\e -> ([], [], e)) <$> pLoopAfterUntil) :: Parser (Block, Block, Exp)
     return $ LoopUntil exp doBlock loopBlock untilExp
-    )
+    ) <* pSpaces
 
 pLoopAfterDo :: Parser (Block, Block, Exp)
 pLoopAfterDo = (\b1 (b2, e) -> (b1, b2, e)) <$ pSpaces <*> pBlock <* pSpaces <*> (
