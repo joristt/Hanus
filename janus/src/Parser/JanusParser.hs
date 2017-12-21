@@ -99,7 +99,7 @@ pProcedure = Procedure
             where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
 
 pBlock :: Parser Block
-pBlock = pList_ng pStatement
+pBlock = pList pStatement
 
 pStatement :: Parser Statement
 pStatement
