@@ -51,11 +51,13 @@ semanticTests =
   , semanticCheck progF1 @?= False
   , semanticCheck progF2 @?= False
   , semanticCheck progF3 @?= False
+  , semanticCheck progF4 @?= False
   ]
   where progT1 = Program [ Procedure main [] [asgT] ]
         progF1 = Program [ Procedure main [] [asgF1] ]
         progF2 = Program [ Procedure main [] [asgF2] ]
         progF3 = Program [ Procedure main [] [asgF3] ]
+        progF4 = Program []
         progF_noMain = Program [ Procedure notMain [] [asgT] ]
         progT2 = Program [ Procedure main [] [asgT2] ]
         progT3 = Program [ Procedure notMain [] [asgT]
