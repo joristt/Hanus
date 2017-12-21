@@ -11,7 +11,7 @@ data Declaration = GlobalVarDeclaration Variable
 data Variable = Variable Identifier Type
 
 newtype Identifier = Identifier String
-              
+
 data LHS = LHSIdentifier Identifier
          | LHSArray LHS Exp
          | LHSField LHS Identifier
@@ -21,7 +21,7 @@ type Block = [Statement]
 data Statement
   -- x y s= exp
   -- pop x y
-  = Assignment String [LHS] (Maybe Exp) 
+  = Assignment String [LHS] (Maybe Exp)
   -- call name x y
   | Call Identifier [LHS]
   -- uncall name x y
@@ -35,7 +35,7 @@ data Statement
   -- from expr
   -- [ do block ]
   -- [ loop block ]
-  -- until expr; 
+  -- until expr;
   | LoopUntil Exp Block Block Exp
   -- local x :: T = expr;
   --   block
@@ -48,7 +48,7 @@ Examples:
 x += expr
 Assignment "+=" (LHSIdentifier "x") (expr)
 
-swap x y 
+swap x y
 (syntactic sugar for (x, y) `swap` ())
 Assignment "swap" (LHSIdentifier "x", LHSIdentifier "y") ()
 -}
@@ -61,7 +61,7 @@ instance Show Declaration where
   show (Procedure identifier variables blocks) = "procedure " ++ show identifier ++ " (" ++ intercalate "," (map show variables) ++ ")\n" ++ intercalate "\n" (map show blocks)
 
 instance Show Variable where
-  show (Variable identifier t) = show identifier ++ "::" ++ show t 
+  show (Variable identifier t) = show identifier ++ "::" ++ show t
 
 instance Show Identifier where
   show (Identifier s) = s
