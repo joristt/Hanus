@@ -38,11 +38,11 @@
     \textit{can we improve the usability of Janus by implementing it as a DSL embedded in Haskell?}
     \end{displayquote}
     
-    \noindent In order to be able to answer this question, we will attempt to improve Janus in several, mainly by incorporating various elements of the host language (Haskell) in the DSL, as well as the addition of certain language constructs. 
-    We will implement certain algorithms in both our DSL and standard Janus and compare the implementations with respect various metrics, such as performance and readability. 
+    \noindent In order to be able to answer this question, we will attempt to improve Janus in several ways, mainly by incorporating various elements of the host language (Haskell) in the DSL, as well as the addition of certain language constructs. 
+    We will implement certain algorithms in both our DSL and standard Janus and compare the implementations with respect to various metrics, such as performance and readability. 
     
     \subsection{Janus}
-    We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements
+    We want to implement the reversible programming language Janus as a DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements
     
     \subsection{Extensions}
     We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
@@ -67,8 +67,8 @@ In order to embed Janus as a DSL in Haskell, we are going to use the \textit{Tem
 On the static checking side of things, TH will allow us to perform the following at compile-time:
 \begin{itemize}
     \item{Parsing}
-    \item{Checking programs are well-typed}
-    \item{Proper variable usage}
+    \item{Checking that programs are well-typed}
+    \item{Verifying proper variable usage}
     \item{Embedding of Haskell expressions}
 \end{itemize}
 
@@ -146,7 +146,7 @@ Local variables
 \item
 Proper scoping for local and global variables. 
 \end{itemize}
-We think that we can reasonably implement these features in the remaining time. 
+We think that we are able to implement these features in the remaining time. 
 
 \subsection{Semantic Checking}
 Although most of the semantic checks we wish to perform on Janus programs are performed by our beloved host language, we also implemented the following Janus-specific checks:
