@@ -1,6 +1,6 @@
 \documentclass[12pt,a4paper]{article}
 
-\usepackage[draft]{minted}
+\usepackage{minted}
 
 % Tables
 \usepackage{multicol}
@@ -31,87 +31,45 @@
 
 
 \section{Problem}
-	\subsection{Experiment}
-	The main research question that we want to be able to answer when we have conducted our experiment is:
-	
-	\begin{displayquote}
-	\textit{can we improve the usability of Janus by implementing it as a DSL embedded in Haskell?}
-	\end{displayquote}
-	
-	\noindent In order to be able to answer this question, we will attempt to improve Janus in multiple ways:
-	\begin{itemize}
-		\item making it possible to put most Haskell expressions on the right hand side of a Janus statement. See section \ref{subsec:template-haskell} for an explanation on why not every possible Haskell expression is allowed.
-		\item Adding extra operators to Janus.
-		\item Verification of our Janus implementation using Liquid Haskell (section \ref{subsec:liquid-haskell}).
-		\item Extending Janus with arbitrary types, meaning that a user should be able to define a type, define operators that work on that type, define what the operators do and lastly, define what the inverse of every operator is.
-	\end{itemize}
-	Several Janus applications will be implemented and tested using our own Janus DSL and existing solutions, and the performances of the implementations will be measured and compared, for example by measuring execution time of the programs, memory usage and the number of lines of code every Janus implementation needs for the different applications that we will implement. The performance will also be measured in ways that are not trivially quantifiable, for example by looking at the expressiveness of the different Janus implementations.
-	
-	\subsection{Janus}
-	We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements. Besides this limitation, the DSL will allow arbitrary Haskell expressions to the right-hand side of Janus statements, enabling programmers to reuse Haskell code. This freedom of accepting Haskell code will not limit the reversibility of the DSL, since the semantics for Janus require statements to be reversible, but not right-hand expressions. For instance, the statement \code{x += f} where \code{f} is any valid Haskell expression. As long as \code{f} does not depend on \code{x}, the statement can be inverted by the statement \code{x -= f}.
-	
-	\subsection{Extensions}
-	We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
-	
-	\subsubsection{Local variables and parameters}
-	The first addition is the possibility to declare local variables. In the original version of Janus\cite{lutz82}, all variables were global. The extension of Janus by Yokoyama\cite{yokoyama10} included local variables. Those variables need to be declared before use with an initial value (\texttt{local int n = 0}) and, when they go out of scope, with a final value (\texttt{delocal int n = 42}). This final value is used as an assertion if the program is executed in the natural direction, and used as an initial value if the program is reversed.
-	
-	Local variables can also be used to desugar program calls with parameters. In the initial version of Janus\cite{lutz82}, no parameters were supported as all variables were global. When local variables are supported, parameters can be easily added.
-	
-	\subsubsection{Multiple or arbitrary types}
-	We would like to add support for different types. When we start, all variables should be typed as integers. Janus also supports stacks and arrays of integers, which we could add to our DSL.
-	
-	For more usability, we could add support for arbitrary types. A user could then easily use a certain type in our DSL by providing some elementary reversible operations such as \texttt{+=} and \texttt{-=} for numbers.
-	
-	Usability can also be increased by adding more reversible operators such as XOR.
-
-	\subsection{Applications}
-	Although a programmer will not always benefit from implementing a program in a reversible language, for example because the programmer has no interest in ever running the inverse of the program in the first place, he or she sometimes might. A few applications that bring benefits to the table when they are implemented in a time-reversible language will be implemented in Janus as part of this project:
-	\begin{itemize}
-		\item
-			a pathfinding algorithm such as BFS or DFS, where you can also automatically backtrack;
-	        \item
-	        		a simple encoding or symmetric encryption algorithm, which can also be decoded or decrypted using the inverse function;
-	        	\item
-			the Hamming(7,4) function, which takes 4 bits as input and returns the four input bits plus three parity bits that can be used to correct an incorrect bit\cite{hamming1950error}. The inverse if Hamming(7,4) can, given the 7 bits, return the 4 original input bits, assuming that at most 1 of the 7 bits is incorrect.
-        		\item
-			If there is sufficient time: a debugger in which one can go back in time, i.e. reverse already executed statements. This will likely be much more difficult to implement than the other applications mentioned above, so it will only be implemented if there is sufficient time.
-	\end{itemize}
-	
-	\subsection{Comparison with Existing Implementations}
-    \subsubsection{Benchmarking}
-    We intend to compare the performance of our embedded DSL to existing implementations of the Janus language. We will do so by implementing the same algorithms in both our DSL and standard Janus, and comparing the time it takes the different implementations to compile and run the programs, as well as memory usage.
-    \subsubsection{Other Metrics}
-    Since our main goal is to improve the usability of Janus, it is hard to come up with metrics that provide a useful insight in the quality of our result. Certainly, performance alone will not be enough to capture the differences between the embedding and existing implementations. In order to attempt to measure the quality of our result beyond raw performance, we will compare our results with existing implementations with respect to the following aspects as well. 
-	\begin{itemize}
-		\item{LOC when implementing a certain algorithm}
-		\item{The amount of language constructs and abstractions at a programmer's disposal when solving problems}
-        \item{The ability to use patterns/constructs that are generally considered as idiomatic or elegant within the programming community}
-	\end{itemize}
-Admittedly, most of the above comes down to opinion. We think that it is useful to think about these aspects when considering our results nonetheless. 
-	
-\subsection{Formal verification}
-To our knowledge, there is no formally verified interpreter for Janus. The most interesting propositions to prove about an implementation of Janus are the following:
+    \subsection{Experiment}
+    The main research question that we want to be able to answer when we have conducted our experiment is:
+    
+    \begin{displayquote}
+    \textit{can we improve the usability of Janus by implementing it as a DSL embedded in Haskell?}
+    \end{displayquote}
+    
+    \noindent In order to be able to answer this question, we will attempt to improve Janus in several, mainly by incorporating various elements of the host language (Haskell) in the DSL, as well as the addition of certain language constructs. 
+    We will implement certain algorithms in both our DSL and standard Janus and compare the implementations with respect various metrics, such as performance and readability. 
+    
+    \subsection{Janus}
+    We want to implement the reversible programming language Janus as an DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} will be used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the READ and WRITE statements will not be valid statements
+    
+    \subsection{Extensions}
+    We have various extensions, mainly focused on improving the usability of our DSL, that we would like to implement if time permits.
+    
 \begin{itemize}
-	\item r-Turing completeness
-	\item Automated verification of conditional and loop assertions
-	\item Reversibility of Janus programs
+\item 
+Local variable blocks
+\item
+Function arguments
+\item
+Arbitrary types
+\item
+Compile-time guarantees on type safety and reversibility. 
 \end{itemize}
-We aim on formally verifying the reversibility of Janus programs, because it appears to be the most feasible option, while being as meaningful as the rest.
-
+    
+    Some Janus features, such as the stack and arrays will not be implemented directly into the DSL, but are available through predefined functions in the host language.
 \section{Methodology}
 \subsection{DSL Embedding}
 \label{subsec:template-haskell}
 In order to embed Janus as a DSL in Haskell, we are going to use the \textit{TemplateHaskell}(TH)\cite{sheard02} and \textit{QuasiQuotation}\cite{mainland07} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This will allow us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
 
-Our main focus will be on static checking, as we are not planning to generate low-level efficient code for running our Janus programs. Nonetheless, we plan on using compile-time code generation to automatically derive the inverse of each declared Janus function and we expect this to give significant performance gains, since at the evaluation of an \textbf{uncall} statement, we will bypass the elaborate procedure of reversing the given function, whose computation time depends on its size.
-
 On the static checking side of things, TH will allow us to perform the following at compile-time:
 \begin{itemize}
-	\item{Parsing}
-	\item{Checking programs are well-typed}
-	\item{Proper variable usage}
-	\item{Embedding of Haskell expressions}
+    \item{Parsing}
+    \item{Checking programs are well-typed}
+    \item{Proper variable usage}
+    \item{Embedding of Haskell expressions}
 \end{itemize}
 
 Specifically, Janus programs will be written as \textit{quasi-quote} strings inside a Haskell source file, which will eventually transfer control to a \textit{quasi quoter}, that will parse and statically check desired properties of the given program, as well as compile the domain-specific syntax to Haskell code.
@@ -120,63 +78,45 @@ For instance, Janus statements of the form \textbf{id} $\langle\textsc{reversibl
 
 In addition to compile-time guarantees, the embedded Janus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
 
-\subsection{Formal Verification}
-\label{subsec:liquid-haskell}
-In order to verify the reversibility of Janus programs, we will use \textit{LiquidHaskell}\cite{vazou16}, which extends Haskell with refinement types (i.e. types accompanied by logical predicates that enforce certain properties). \textit{LiquidHaskell} will enable us to write Haskell functions, which will act as equation proofs of the reversibility of all possible Janus programs.
-
-Mechanically checking the above statement can be achieved by performing structural induction on the syntax of our DSL. Technically, this proof will correspond to a Haskell function, which will perform recursion on the data types of our AST, via the process of \textit{refinement reflection} (i.e. reflecting the code of a function in its output type).
-
-\subsection{Risk and contingency plans}
-There are a number of risks to consider when creating a DSL, which are specified below with their respective contingency plans.
-\begin{itemize}
-\item \textbf{Arbitrary types} The plan is to implement arbitrary types in the DSL. It is expected that implementing arbitrary types will take a long time and therefore, the risk exists that the implementation can not be completed in the given timespan. The contingency plan, if this goal takes too much time, is to reduce arbitrary types to some special types.
-\item \textbf{Formal verification} As there is, to our knowledge, no verified implementation of Janus, it would be nice to have a complete verified implementation of our Janus EDSL. Unfortunately, there is too little time for that, hence we will consider this part as optional and focus on it, only if everything goes according to the planned schedule. Initially, we will focus only on the basic fragment of Janus (i.e. without any extensions) and afterwards, if time permits, we would like to make the proofs compatible with the extended fragment of Janus.
-\item \textbf{Impossible applications} It is a possibility that the applications that will be implemented in the DSL are impossible to implement in a reversible language. If there is an application where there is no suitable variant found that can be implemented in a reversible language, that specific application will be ignored or a suitable replacement will be looked for. 
-\item \textbf{Impossible use of libraries} There is the risk that one of the proposed libraries we plan to use to implement the DSL turns out not to be suitable. This may be the case because the library lacks some features that are necessary for the implementation of the DSL. If this is the case, a replacement will be looked for. If no suitable replacement can be found, the functionality will either be implemented in another way without the use of a library or will be removed from the specification.
-\end{itemize}
-
 \subsection{Expected outcome}
-At the end of the project, we expect to have a working Janus DSL, that supports all features from the initial Janus version \cite{lutz82}. We expect to have implemented local variables and function arguments from the extended Janus version \cite{yokoyama10} and we hope to have support for arbitrary types. If we cannot implement the latter, we do not consider the project to be failed, but this makes the DSL less usable. Furthermore, the implementation should have compile-time guarantees on the reversibility of programs.
+At the end of the project, we expect to have a working DSL, that supports all features from the initial Janus version \cite{lutz82}. We expect to have implemented local variables and function arguments from the extended Janus version \cite{yokoyama10} and we hope to have support for arbitrary types. If we cannot implement the latter, we do not consider the project to be failed, but this makes the DSL less usable. Furthermore, the implementation should have compile-time guarantees on the reversibility of programs as well as compile-time type safety. 
 
-To demonstrate the usability of our DSL, we compare various applications in the original version of Janus with programs written using our embedded DSL. We will compare these examples by benchmarking and the readability or style of the code. Given that our DSL can make use of the power of Haskell, we assume that programs in our DSL will be shorter and more readable. It is hard to estimate the performance of our implementation, as this depends on how well the Haskell compiler (GHC) can optimize programs written in our DSL. However, the existing interpreters for Janus do not seem to focus on optimizing performance, so 
-the bar for our implementation is low.
-
-\section{Planning}
+\subsection{Planning}
 \setlength{\tabcolsep}{20pt}
 \renewcommand{\arraystretch}{1.6}
 \begin{center}
 \begin{tabular}{cl}
 \multirow{2}{*}{\textsc{week 1}} &
-	\textbf{Defining the AST:} Ivo, JorisB  \\ &
-	\textbf{Parser:} Ivo, JorisB \\ &
-	\textbf{Evaluation:} Cas, JorisT\\ &
-	\textbf{Finding suitable algorithms:} JorisT\\ &
-	\textbf{Setup Template Haskell:} Orestis \\ \hline
+    \textbf{Defining the AST:} Ivo, JorisB  \\ &
+    \textbf{Parser:} Ivo, JorisB \\ &
+    \textbf{Evaluation:} Cas, JorisT\\ &
+    \textbf{Finding suitable algorithms:} JorisT\\ &
+    \textbf{Setup Template Haskell:} Orestis \\ \hline
 \multirow{2}{*}{\textsc{week 2}} &
-	\textbf{Evaluation:} Cas, JorisT \\ {} &
-	\textbf{Local variables:} Cas, JorisB \\ &
-	\textbf{Function parameters:}  Cas, JorisB\\ &
-	\textbf{Semantic checker:} Orestis  \\ &
-	\textbf{Arbitrary types:}  Ivo, JorisT\\ \hline
+    \textbf{Evaluation:} Cas, JorisT \\ {} &
+    \textbf{Local variables:} Cas, JorisB \\ &
+    \textbf{Function parameters:}  Cas, JorisB\\ &
+    \textbf{Semantic checker:} Orestis  \\ &
+    \textbf{Arbitrary types:}  Ivo, JorisT\\ \hline
 \multirow{2}{*}{\textsc{week 3}} &
-	\textbf{Local variables:} Cas, JorisB \\ {} &
-	\textbf{Function parameters:}  Cas, JorisB\\ &
-	\textbf{Initial benchmarking setup:} Orestis \\ &
-	\textbf{Arbitrary types:}  Ivo, JorisT \\ &
-	\textbf{Intermediate report:} Everybody  \\
+    \textbf{Local variables:} Cas, JorisB \\ {} &
+    \textbf{Function parameters:}  Cas, JorisB\\ &
+    \textbf{Initial benchmarking setup:} Orestis \\ &
+    \textbf{Arbitrary types:}  Ivo, JorisT \\ &
+    \textbf{Intermediate report:} Everybody  \\
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Progress Report}} \\
 \multirow{2}{*}{\textsc{week 4}} &
-	\textbf{Presentation}  \\ {} &
-	\textbf{Implement algorithms}  \\ &
-	\textbf{Arbitrary types}  \\
+    \textbf{Presentation}  \\ {} &
+    \textbf{Implement algorithms}  \\ &
+    \textbf{Arbitrary types}  \\
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Presentation}} \\
 \multirow{2}{*}{\textsc{week 5}} &
-    \textbf{Implement algorithms}  \\ &	
-	\textbf{Analysis of benchmarking results}  \\ {} &
-	\textbf{Benchmarking} \\ \hline
+    \textbf{Implement algorithms}  \\ & 
+    \textbf{Analysis of benchmarking results}  \\ {} &
+    \textbf{Benchmarking} \\ \hline
 \multirow{2}{*}{\textsc{week 6}} &
-	\textbf{Final report}  \\ & \\
-	
+    \textbf{Final report}  \\ & \\
+    
 \rowcolor{green} \multicolumn{2}{c}{\textsc{Project Submission}}
 \end{tabular}
 \end{center}
@@ -187,11 +127,26 @@ the bar for our implementation is low.
 
 \subsection{Parser}
 For the DSL, a parser has to be implemented that can parse a string to a Janus abstract syntax tree. This parser is written using the \textit{uu-parsinglib}, a Haskell package that uses error correction. Error correction means that the parser will try to correct the input if necessary. Besides the Janus syntax that is parsed with the \textit{uu-parsinglib}, the DSL needs to support arbitrary Haskell expressions and Haskell types. The parsing of these pieces will be done by the Haskell package \textit{haskell-src-meta}. This package provides functions that will take a \textit{string} as an argument and return a Template Haskell \textit{Exp} for an expression or a Template Haskell \textit{Type} for the types. These types and expressions can cause some problems, because the function that parses an \textit{Exp} or a \textit{Type} expects a string as parameter. This means that the exact string that contains the expression or type needs to be determined. This is problematic, as there is no easy way to determine where the type or the expression ends. The way it is implemented in the parser is that it is known which character or characters are expected immediately after the expression or type. The parser parses until it finds the first terminating character that it can parse. If this is a valid parsing, the parser continues to the second character in the string that is a terminating character, continuing until the parser fails. If that happens, it backs up one step and then returns the parsed expression. An example is the Janus statement:
-	\begin{displayquote}
-		if((1+2)==3)
-	\end{displayquote}
+    \begin{displayquote}
+        if((1+2)==3)
+    \end{displayquote}
 In this example, the Haskell statement is the string \textit{(1+2)==3}. The if statement in Janus needs parentheses around the expression. The parser knows that there should be a Haskell expression just after the first parenthesis. It starts by parsing the string \textit{(1+2} because it tries to parse without parsing the first closing parenthesis. This fails, so it continues with \textit{(1+2)==3}, which is a valid Haskell expression. This expression is then used. This way, all possible Haskell expressions are supported by the parser.
 
+\subsection{Evaluation}
+In order to actually run programs written in the DSL, we need some kind of evaluation mechanism. Since the goals of this project include added compile-time guarantees for Janus with respect to type safety, we used Template Haskell for this. The basic approach is to convert a Janus AST to an equivalent Template Haskell representation. Running the resulting program is trivially done by splicing this object into another file. This allows us to use Haskell's type system to enforce type safety at compile-time, as well as enabling the usage of arbitrary types within the DSL.
+
+Currently, we have implemented an evaluator that allows us to convert most elements of a Janus AST to an equivalent Template Haskell representation. The evaluator enforces compile-time type safety on the provided AST and provides support for arbitrary types. Although we consider this to be decent progress, there are still some elements from Janus that have to be implemented in the evaluator:
+\begin{itemize}
+\item 
+While-loops
+\item
+Function arguments
+\item
+Local variables
+\item
+Proper scoping for local and global variables. 
+\end{itemize}
+We think that we can reasonably implement these features in the remaining time. 
 
 \subsection{Semantic Checking}
 Although most of the semantic checks we wish to perform on Janus programs are performed by our beloved host language, we also implemented the following Janus-specific checks:
