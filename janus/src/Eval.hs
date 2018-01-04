@@ -11,6 +11,7 @@ import Language.Haskell.TH
 import Control.Monad
 import Control.Monad.State
 
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
@@ -18,8 +19,8 @@ import qualified Debug.Trace as Debug
 
 trace x = Debug.trace (show x) x
 
-type StatePatterns = Map.Map Identifier [Pat]
-type Context = (Map.Map Name Name, StatePatterns)
+type StatePatterns = Map Identifier [Pat]
+type Context = (Map Name Name, StatePatterns)
 
 -- Example program AST
 -- -------------------------------
