@@ -11,6 +11,7 @@ import Language.Haskell.TH
 import Control.Monad
 import Control.Monad.State
 
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
