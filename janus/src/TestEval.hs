@@ -12,11 +12,10 @@ import StdLib.Operator
 --test  = $(getVal 10)
 --test2 = $(evalDeclaration (GlobalVarDeclaration (Variable (Identifier "a") Int)))
 
+-- $(evalProgram p)
 
-$(evalProgram p)
-
-main :: IO ()
-main = do
+invoke :: IO ()
+invoke = do
     decs <- runQ $ evalProgram p
     let result = concatMap pprint decs
     putStrLn result
