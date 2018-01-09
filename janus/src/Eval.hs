@@ -30,10 +30,10 @@ type Context = (Map Name Name, StatePatterns)
 -- 
 -- procedure main
 --     glob_var2 += 10
---     call substract
---     call substract
+--     call sub
+--     call sub
 -- 
--- procedure substract
+-- procedure sub
 --     glob_var1 -= glob_var2
 --     
 -- -------------------------------
@@ -42,8 +42,8 @@ type Context = (Map Name Name, StatePatterns)
 globvartype = ConT $ mkName "Int"
 globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
 globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 1))
-proc1 = Procedure (Identifier "main") [] [Assignement "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "substract") []]
-proc2 = Procedure (Identifier "substract") [] [(Assignement "-=" [LHSIdentifier (Identifier "glob_var1")] ((VarE . mkName) "glob_var2"))]
+proc1 = Procedure (Identifier "main") [] [Assignement "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "sub") [], Call (Identifier "sub") []]
+proc2 = Procedure (Identifier "sub") [] [(Assignement "-=" [LHSIdentifier (Identifier "glob_var1")] ((VarE . mkName) "glob_var2"))]
 p = Program [globvar1, globvar2, proc1, proc2]
 
 -- Evaluate a given program by generating a 'run' function that calls the 'main' procedure of the program. 
@@ -80,7 +80,7 @@ letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
-    let name = namify ident
+    let name = nameId ident
     return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
 -- Generate an expression that calls the main function with all global 
@@ -99,12 +99,12 @@ statePattern varDecs = mapM toPat varDecs
 
 evalGlobalVarDeclaration :: Declaration -> Q Stmt
 evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
-    let name = namify n
+    let name = nameId n
     return $ LetS [ValD (VarP name) (NormalB e) []]
 
 evalProcedure :: StatePatterns -> [Pat] -> Declaration -> Q Dec
 evalProcedure stPatterns globalArgs (Procedure n vs b) = do
-    let name = namify n
+    let name = nameId n
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
     body <- evalProcedureBody stPatterns b pattern
@@ -129,7 +129,7 @@ evalAssignments op lhss expr = concatMapM (\lhs -> evalAssignment op lhs expr) l
 evalAssignment :: String -> LHS -> Exp -> Q [Stmt]
 evalAssignment op (LHSIdentifier n) lhs = do
     let f = (VarE . mkName) op
-    let x = namify n
+    let x = nameId n
     op' <- [|(\(Operator fwd _) -> fwd)|]
     let fApp = AppE (AppE (AppE op' f) (VarE x)) lhs
     tmpN <- newName "tmp"
@@ -163,12 +163,12 @@ evalIf stPatterns g tb eb pattern = do
 
 -- *** HELPERS *** ---
 
-namify :: Identifier -> Name
-namify (Identifier n) = mkName n
+nameId :: Identifier -> Name
+nameId (Identifier n) = mkName n
 
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
-    let name = namify n
+    let name = nameId n
     return $ SigP (VarP name) t
 
 expFromVarP :: Pat -> Q Exp
