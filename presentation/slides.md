@@ -1,153 +1,132 @@
 ---
-author: Author name here
+author: Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, Orestis Melkonian
 title: Concepts of programming languages
-subtitle: My title here
+subtitle: Janus
 theme: uucs
-mainfont: Ubuntu Light
-sansfont: Ubuntu Light
----
-
-Please use Markdown to write your slides. 
-
-This makes sure that slides will be consistent -- and easy for me to
-edit in the future.
+monofontoptions: Scale=0.75
+monofont: Fira Mono
+mainfont: Fira Sans Light
+sansfont: Fira Sans Light
 
 ---
 
-Start a new slide with by beginning a new line three dashes `---`.
+# Example
 
-For example:
-
-```
----
-
-My contents
-
----
-```
-
----
-
-# Titles
-
-You can use the hash symbol \# to make the title of a slide.
-
-## Subtitle
-
-You can use more than one hash symbol \#\# to have subtitles on your
-slide.
-
----
-
-* Bullet lists
-* are pretty easy
-* too!
-
----
-
-# Emphasis
-
-You can include a word in asterisks to add *emphasis* or two asterisks
-to make it **bold**.
-
-That is:
-
-```
-*emphasis* vs **bold**
-```
-
----
-
-# Images
-
-Please include any images in the `img` subdirectory.
-
-You can refer to images using the usual markdown syntax:
-
-![My caption](img/uueduc.jpg "Alt caption"){ width=30% }
-
----
-
-# Staged builds
-
-This is quite easy
-
-. . .
-
-Just insert `. . .` on a new line when you want the slide to appear
-incrementally.
-
----
-
-# Code
-
-You can use backticks to include inline code such as `x` or `y`.
-
-Use three backticks to introduce a code block:
-
-```
-main = print "Hello world!"
-```
-
----
-
-# Syntax highlighting
-
-There are syntax highlighting options for the most widely used
-languages.
+```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
 
 ```haskell
-foo y = let x = 4 in x + z
-  where
-  z = 12
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2
 ```
 
 ---
 
-# Making slides
+# Example
 
-I've included a Makefile to build slides.
+```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
 
-You will need to have the Haskell tool `pandoc` installed:
-
+```haskell
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2     ; -- Why do we need this?
 ```
-> cabal install pandoc
-> make
+
+---
+
+# Example
+
+```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
+
+```haskell
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2     ; -- Why do we need this?
 ```
----
-
-# Working with markdown
-
-You may want to install the markdown mode for emacs (or some other
-editor of choice).
-
-I've included some file local variables at the bottom of this file --
-you may find them useful.
+* Q: How do we calculate the inverse?
 
 ---
 
-# Inline latex
+# Example
 
-You can always use \emph{inline} \LaTeX commands if you want.
+```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
 
-But try to avoid this if you can.
+```haskell
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2     ; -- Used for inverting the if-statement.
+```
 
-Most Markdown commands should suffice.
-
-\LaTeX is useful for formula's
-
-\begin{equation}
-\tau + x = \sigma
-\end{equation}
-
-Or inline formulas, enclosed in dollar symbols like so $\tau + x$.
+Q: How do we calculate the inverse?
+![The statement inverter for Janus if statements.](img/if-inverse.png "The statement inverter for Janus if statements."){ width=100% }
 
 ---
 
-# Questions
+# Example
 
-If you can't get things to work, don't hesitate to get in touch!
+```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
 
+```haskell
+procedure fibInverse
+	if x1 = x2 then
+		x2 -= 1          ; -- 2nd Fib nr is 1.
+		x1 -= 1          ; -- 1st Fib nr is 1.
+	else
+		x1 <=> x2
+		x1 -= x2
+		call fibInverse
+		n += 1
+	fi n = 0
+```
+
+---
+
+# Example
+
+```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
+
+* Q: What does the inverse of fib do?
+
+```haskell
+procedure fibInverse
+	if x1 = x2 then
+		x2 -= 1          ; -- 2nd Fib nr is 1.
+		x1 -= 1          ; -- 1st Fib nr is 1.
+	else
+		x1 <=> x2
+		x1 -= x2
+		call fibInverse
+		n += 1
+	fi n = 0
+```
 
 <!-- Local Variables:  -->
 <!-- pandoc/write: beamer -->
