@@ -128,7 +128,7 @@ procedure main
 # Procedures
 
 - No parameters
-- There exists version with parameters
+- There exists a version with parameters
 - Pass by reference
 
 ```haskell
@@ -158,9 +158,10 @@ procedure g
 - ```e1``` is true only the first iteration, false every other iteration
 - ```s1``` is executed after ```e1``` on every iteration
 - ```e2``` is false until the last run
-- ```s2``` is executed if ```e2``` is true, continiue to ```e1```
+- ```s2``` is executed if ```e2``` is true, continue to ```e1```
 
 ---
+
 # Loop
 
 ```haskell
@@ -174,15 +175,13 @@ procedure main
         b += a
     until a = 10
 ```
-Result: a = 10, b = 45
+The result is `{ a = 10, b = 45 }`
 
 ---
 
-
 # Example
 
-```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
-
+`fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fib
 	if n = 0 then
@@ -200,8 +199,7 @@ procedure fib
 
 # Example
 
-```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
-
+`fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fib
 	if n = 0 then
@@ -215,32 +213,15 @@ procedure fib
 	fi x1 = x2     ; -- Why do we need this?
 ```
 
----
+. . .
 
-# Example
-
-```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
-
-```haskell
-procedure fib
-	if n = 0 then
-		x1 += 1    ; -- 1st Fib nr is 1.
-		x2 += 1    ; -- 2nd Fib nr is 1.
-	else
-		n -= 1
-		call fib
-		x1 += x2
-		x1 <=> x2
-	fi x1 = x2     ; -- Why do we need this?
-```
 * Q: How do we calculate the inverse?
 
 ---
 
 # Example
 
-```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
-
+`fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fib
 	if n = 0 then
@@ -253,16 +234,13 @@ procedure fib
 		x1 <=> x2
 	fi x1 = x2     ; -- Used for inverting the if-statement.
 ```
-
-Q: How do we calculate the inverse?
-![The statement inverter for Janus if statements.](img/if-inverse.png "The statement inverter for Janus if statements."){ width=100% }
+![The statement inverter for Janus if statements.](img/if-inverse.png "The statement inverter for Janus if statements."){ width=100% }\
 
 ---
 
 # Example
 
-```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
-
+`fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fibInverse
 	if x1 = x2 then
@@ -275,7 +253,6 @@ procedure fibInverse
 		n += 1
 	fi n = 0
 ```
-
 ---
 
 # Example
