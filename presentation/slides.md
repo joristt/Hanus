@@ -10,6 +10,8 @@ sansfont: Fira Sans Light
 
 ---
 
+---
+
 # Janus
 
 A reversible programming language.
@@ -99,6 +101,110 @@ More memory.
 
 ---
 
+# Motivation
+
+What are reasons to pursue logically reversible computations?
+
+. . . 
+ 
+* More heat efficient circuitry
+
+. . . 
+
+* Quantum computing
+
+# A small detour
+
+Let's venture into the realm of physics:
+
+Imagine a set of balls bouncing around in a frictionless world:
+
+# Bouncing balls 1
+
+![bouncing balls in a world without friction](img/frictionless.png){width=40%}
+
+. . . 
+
+All information about both future and past configurations is preserved.
+
+# Bouncing balls 2
+
+![bouncing balls in the real world](img/friction.png){width=40%}
+
+. . . 
+
+Information about past configurations gets lost as the balls lose velocity.
+
+---
+
+This information is not truely lost, however.
+
+. . .  
+
+Entropy of the system must increase or remain equal. In this case, **heat** is
+dissipated into the environment.
+
+---
+
+# Landauer's principle
+
+In computers, information about past states is often lost (or erased) as computations
+are carried out. 
+
+. . . 
+
+However, the second law of thermodynamics still applies. 
+
+---
+
+This means that circuits *must* dissipate some amount of heat as information gets destroyed. 
+
+. . . 
+
+Commonly refered to as **Landauer's principle**. 
+
+# Reversible computing
+
+![Billiard ball AND-gate](img/and.gif){width=75%}
+
+. . . 
+
+This is also refered to as a **Toffoli gate**. 
+
+---
+
+Toffoli gates are mainly theoretical
+
+. . . 
+
+But ciruits with energy dissipation below the von Neumann-Landauer limit have been built. 
+
+# Quantum Computing
+
+How does all this apply to quantum computing?
+
+. . . 
+
+The underlying physical processes of quantum computing are actually fundamentally reversible.
+
+---
+
+Similar to the frictionless billiard ball gate, information cannot leave a quantum circuit in the 
+form of heat. 
+
+The system is said to bo **locigally reversible**.
+
+# Logical reversiblity 
+
+Since all logical information is preserved in such systems, it is imposible to carry out certain computations
+
+Specifically, it is impossible to carry out computations that reach a logical state that can also be reached through
+other paths of computation. 
+
+. . . 
+
+Notice the similarity with reversible Turing machines!
+
 # Variables
 
 - All global variables
@@ -112,7 +218,7 @@ More memory.
 
 - There is no ```*=``` and ```/=```
 - A variable that occurs on the left can not occur on the right in the same statement
-	- ```x-=x``` is forbidden
+    - ```x-=x``` is forbidden
 
 ```haskell
 a b c
@@ -182,15 +288,15 @@ The result is `{ a = 10, b = 45 }`
 `fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fib
-	if n = 0 then
-		x1 += 1    ; -- 1st Fib nr is 1.
-		x2 += 1    ; -- 2nd Fib nr is 1.
-	else
-		n -= 1
-		call fib
-		x1 += x2
-		x1 <=> x2
-	fi x1 = x2
+    if n = 0 then
+        x1 += 1    ; -- 1st Fib nr is 1.
+        x2 += 1    ; -- 2nd Fib nr is 1.
+    else
+        n -= 1
+        call fib
+        x1 += x2
+        x1 <=> x2
+    fi x1 = x2
 ```
 
 ---
@@ -200,15 +306,15 @@ procedure fib
 `fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fib
-	if n = 0 then
-		x1 += 1    ; -- 1st Fib nr is 1.
-		x2 += 1    ; -- 2nd Fib nr is 1.
-	else
-		n -= 1
-		call fib
-		x1 += x2
-		x1 <=> x2
-	fi x1 = x2     ; -- Why do we need this?
+    if n = 0 then
+        x1 += 1    ; -- 1st Fib nr is 1.
+        x2 += 1    ; -- 2nd Fib nr is 1.
+    else
+        n -= 1
+        call fib
+        x1 += x2
+        x1 <=> x2
+    fi x1 = x2     ; -- Why do we need this?
 ```
 
 . . .
@@ -222,15 +328,15 @@ procedure fib
 `fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fib
-	if n = 0 then
-		x1 += 1    ; -- 1st Fib nr is 1.
-		x2 += 1    ; -- 2nd Fib nr is 1.
-	else
-		n -= 1
-		call fib
-		x1 += x2
-		x1 <=> x2
-	fi x1 = x2     ; -- Used for inverting the if-statement.
+    if n = 0 then
+        x1 += 1    ; -- 1st Fib nr is 1.
+        x2 += 1    ; -- 2nd Fib nr is 1.
+    else
+        n -= 1
+        call fib
+        x1 += x2
+        x1 <=> x2
+    fi x1 = x2     ; -- Used for inverting the if-statement.
 ```
 ![The statement inverter for Janus if statements.](img/if-inverse.png "The statement inverter for Janus if statements."){ width=100% }\
 
@@ -241,15 +347,15 @@ procedure fib
 `fib`: calculates (n+1)-th and (n+2)-th Fibonacci number.
 ```haskell
 procedure fibInverse
-	if x1 = x2 then
-		x2 -= 1          ; -- 2nd Fib nr is 1.
-		x1 -= 1          ; -- 1st Fib nr is 1.
-	else
-		x1 <=> x2
-		x1 -= x2
-		call fibInverse
-		n += 1
-	fi n = 0
+    if x1 = x2 then
+        x2 -= 1          ; -- 2nd Fib nr is 1.
+        x1 -= 1          ; -- 1st Fib nr is 1.
+    else
+        x1 <=> x2
+        x1 -= x2
+        call fibInverse
+        n += 1
+    fi n = 0
 ```
 ---
 
@@ -261,15 +367,15 @@ procedure fibInverse
 
 ```haskell
 procedure fibInverse
-	if x1 = x2 then
-		x2 -= 1          ; -- 2nd Fib nr is 1.
-		x1 -= 1          ; -- 1st Fib nr is 1.
-	else
-		x1 <=> x2
-		x1 -= x2
-		call fibInverse
-		n += 1
-	fi n = 0
+    if x1 = x2 then
+        x2 -= 1          ; -- 2nd Fib nr is 1.
+        x1 -= 1          ; -- 1st Fib nr is 1.
+    else
+        x1 <=> x2
+        x1 -= x2
+        call fibInverse
+        n += 1
+    fi n = 0
 ```
 ---
 
@@ -424,7 +530,7 @@ In our research project, we use *TemplateHaskell* and *QuasiQuotation* to embed
 Janus in Haskell:
 ```haskell
 [hanus| procedure encode(im :: Image, ret :: [Byte]) {
-	-- Janus commands with antiquotation
+    -- Janus commands with antiquotation
 }|]
 encode :: Image -> [Byte]
 encode = call encode
