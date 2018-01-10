@@ -3,8 +3,10 @@ author: Author name here
 title: Concepts of programming languages
 subtitle: My title here
 theme: uucs
-mainfont: Ubuntu Light
-sansfont: Ubuntu Light
+monofontoptions: Scale=0.75
+monofont: Fira Mono
+mainfont: Fira Sans Light
+sansfont: Fira Sans Light
 ---
 
 Please use Markdown to write your slides. 
@@ -148,6 +150,94 @@ Or inline formulas, enclosed in dollar symbols like so $\tau + x$.
 
 If you can't get things to work, don't hesitate to get in touch!
 
+---
+
+# Janus
+
+A reversible programming language
+
+Not turing complete!
+
+---
+
+# Reversibility
+
+Every statement can be reverted.
+No history is stored.
+
+```haskell
+x += y * 3
+```
+
+. . .
+
+```haskell
+x -= y * 3
+```
+
+---
+
+# Injective functions
+Reversible languages can only compute injective functions.
+
+\begin{equation}
+\forall x, y: f(x) = f(y) \implies x = y
+\end{equation}
+
+Every output has only a single input.
+
+. . .
+
+\begin{equation}
+h(x) = (x, g(x))
+\end{equation}
+
+---
+
+# Turing completeness
+Turing machines can compute non-injective functions.
+
+Reversible languages are not turing complete.
+
+Reversible Turing complete.
+
+---
+
+# Turing machines
+
+Infinite tape of memory
+
+Finite set of states
+
+Transition function
+
+- Current state
+- Current symbol on tape
+- Write symbol
+- Move tape pointer
+- Next state
+
+---
+
+# Turing machines
+
+\emph{Forward deterministic}: given any state and tape, there is at most one transition \emph{from} that state.
+
+\emph{Backward deterministic}: given any state and tape, there is at most one transition \emph{to} that state.
+
+$P$ is the class of forward deterministic turing machines, $NP$ of non-deterministic turing machines.
+
+Reversible Turing complete: a language that can simulate forward and backward deterministic turing machines.
+
+---
+
+# What do reversible languages compute
+
+Given a forward deterministic turing machine that computes $f(x)$,
+
+There exists a reversible turing machine that computes $x \rightarrow (x, f(x))$.
+
+More memory.
 
 <!-- Local Variables:  -->
 <!-- pandoc/write: beamer -->
