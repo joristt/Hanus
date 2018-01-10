@@ -376,12 +376,12 @@ encode = call encode
 decode :: [Byte] -> Image
 decode = uncall encode
 ```
-![](img/hanus.svg){ width=8% }\ \ Come and check out our poster in de Vagant!
+![](img/hanus.png){ width=8% }\ \ Come and check out our poster in de Vagant!
 
 # Thanks! Questions?
 \centering
+![The life of a Janus programmer.](img/meme.png "The life of a Janus programmer."){ width=85% }\
 \tiny{From CodeComics.com, modified. }
-![The life of a Janus programmer.](img/meme.png "The life of a Janus programmer."){ width=70% }\
 
 ---
 
