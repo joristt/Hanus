@@ -106,15 +106,15 @@ More memory.
 - All global variables
 - Default value
 - Modification operators
-- Support only ```+=```, ```-=``` and ```^=```
+- Only support for ```+=```, ```-=``` and ```^=```
 
 ---
 
 # Limitations
 
 - There is no ```*=``` and ```/=```
-- A variable that occurs on the left can not occur on the right
-- ```x+=x``` is forbidden
+- A variable that occurs on the left can not occur on the right in the same statement
+	- ```x-=x``` is forbidden
 
 ```haskell
 a b c
@@ -133,7 +133,6 @@ procedure main
 
 ```haskell
 a
-
 procedure main
     call f
     uncall g
