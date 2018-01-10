@@ -67,7 +67,11 @@ letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
+<<<<<<< HEAD
     let name = trace $ namify ident
+=======
+    let name = nameId ident
+>>>>>>> 501afb6f207f09ddcb9f44e2a8bf43dc0c35f361
     return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
 -- Generate an expression that calls the main function with all global 
@@ -105,13 +109,19 @@ statePattern varDecs = mapM toPat varDecs
 -- Evaluate a global variable declaration to TH representation
 evalGlobalVarDeclaration :: Declaration -> Q Stmt
 evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
-    let name = namify n
+    let name = nameId n
     return $ LetS [ValD (VarP name) (NormalB e) []]
 
+<<<<<<< HEAD
 -- Evaluate a procedure to it's corresponding TH representation
 evalProcedure :: [Pat] -> Declaration -> Q Dec
 evalProcedure globalArgs (Procedure n vs b) = do
     let name = namify n
+=======
+evalProcedure :: StatePatterns -> [Pat] -> Declaration -> Q Dec
+evalProcedure stPatterns globalArgs (Procedure n vs b) = do
+    let name = nameId n
+>>>>>>> 501afb6f207f09ddcb9f44e2a8bf43dc0c35f361
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
     body <- evalProcedureBody b pattern
@@ -142,7 +152,7 @@ evalAssignments op lhss expr = concatMapM (\lhs -> evalAssignment op lhs expr) l
 evalAssignment :: String -> LHS -> Exp -> Q [Stmt]
 evalAssignment op (LHSIdentifier n) lhs = do
     let f = (VarE . mkName) op
-    let x = namify n
+    let x = nameId n
     op' <- [|(\(Operator fwd _) -> fwd)|]
     let fApp = AppE (AppE (AppE op' f) (VarE x)) lhs
     tmpN <- newName "tmp"
@@ -192,15 +202,20 @@ evalWhile pattern guard body = undefined
 
 -- *** HELPERS *** ---
 
+<<<<<<< HEAD
 -- Convert an identifier (as defined in AST.hs) to a TH name
 namify :: Identifier -> Name
 namify (Identifier n) = mkName n
+=======
+nameId :: Identifier -> Name
+nameId (Identifier n) = mkName n
+>>>>>>> 501afb6f207f09ddcb9f44e2a8bf43dc0c35f361
 
 -- Convert a variable (as defined in AST.hs) to a TH 
 -- pattern representing that variable
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
-    let name = namify n
+    let name = nameId n
     return $ SigP (VarP name) t
 
 -- Create a TH expression referencing a variable from a TH pattern referencing
