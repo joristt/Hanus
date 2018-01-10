@@ -67,11 +67,7 @@ letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
-<<<<<<< HEAD
-    let name = trace $ namify ident
-=======
-    let name = nameId ident
->>>>>>> 501afb6f207f09ddcb9f44e2a8bf43dc0c35f361
+    let name = trace $ nameId ident
     return (ValD (SigP (VarP name) t) (NormalB exp) []) 
 
 -- Generate an expression that calls the main function with all global 
@@ -112,16 +108,10 @@ evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
     let name = nameId n
     return $ LetS [ValD (VarP name) (NormalB e) []]
 
-<<<<<<< HEAD
 -- Evaluate a procedure to it's corresponding TH representation
 evalProcedure :: [Pat] -> Declaration -> Q Dec
 evalProcedure globalArgs (Procedure n vs b) = do
     let name = namify n
-=======
-evalProcedure :: StatePatterns -> [Pat] -> Declaration -> Q Dec
-evalProcedure stPatterns globalArgs (Procedure n vs b) = do
-    let name = nameId n
->>>>>>> 501afb6f207f09ddcb9f44e2a8bf43dc0c35f361
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
     body <- evalProcedureBody b pattern
@@ -202,14 +192,8 @@ evalWhile pattern guard body = undefined
 
 -- *** HELPERS *** ---
 
-<<<<<<< HEAD
--- Convert an identifier (as defined in AST.hs) to a TH name
-namify :: Identifier -> Name
-namify (Identifier n) = mkName n
-=======
 nameId :: Identifier -> Name
 nameId (Identifier n) = mkName n
->>>>>>> 501afb6f207f09ddcb9f44e2a8bf43dc0c35f361
 
 -- Convert a variable (as defined in AST.hs) to a TH 
 -- pattern representing that variable

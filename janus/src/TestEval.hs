@@ -16,6 +16,6 @@ import StdLib.Operator
 
 invoke :: IO ()
 invoke = do
-    decs <- runQ $ evalProgram p
+    decs <- runQ (evalProgram p)
     let result = concatMap pprint decs
     putStrLn result
