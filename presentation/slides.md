@@ -99,6 +99,87 @@ There exists a reversible turing machine that computes $x \rightarrow (x, f(x))$
 
 More memory.
 
+---
+
+# Variables
+
+- All global variables
+- Default value
+- Modification operators
+- Support only ```+=```, ```-=``` and ```^=```
+
+---
+
+# Limitations
+
+- There is no ```*=``` and ```/=```
+- A variable that occurs on the left can not occur on the right
+- ```x+=x``` is forbidden
+
+```haskell
+a b c
+
+procedure main
+    a += 3
+    b -= a + 4
+    c += a - b
+```
+
+# Procedures
+
+- No parameters
+- There exists version with parameters
+- Pass by reference
+
+```haskell
+a
+
+procedure main
+    call f
+    uncall g
+
+procedure f
+    a += 3
+
+procedure g
+    a -= 5
+    a += 1
+```
+---
+
+# Loop
+
+```haskell
+    from e1 do
+        s1
+    loop
+        s2
+    until e2
+```
+- ```e1``` is true only the first iteration, false every other iteration
+- ```s1``` is executed after ```e1``` on every iteration
+- ```e2``` is false until the last run
+- ```s2``` is executed if ```e2``` is true, continiue to ```e1```
+
+---
+# Loop
+
+```haskell
+a
+b
+
+procedure main
+    from a = 0 do
+        a += 1
+    loop
+        b += a
+    until a = 10
+```
+Result: a = 10, b = 45
+
+---
+
+
 # Example
 
 ```fib```: calculates (n+1)-th and (n+2)-th Fibonacci number.
