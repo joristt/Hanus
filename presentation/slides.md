@@ -192,11 +192,11 @@ The underlying physical processes of quantum computing are actually fundamentall
 Similar to the frictionless billiard ball gate, information cannot leave a quantum circuit in the 
 form of heat. 
 
-The system is said to bo **locigally reversible**.
+The system is said to be **locigally reversible**.
 
 # Logical reversiblity 
 
-Since all logical information is preserved in such systems, it is imposible to carry out certain computations
+Since all logical information is preserved in such systems, it is imposible to carry out certain computations.
 
 Specifically, it is impossible to carry out computations that reach a logical state that can also be reached through
 other paths of computation. 
