@@ -217,6 +217,21 @@ procedure fibInverse
 	fi n = 0
 ```
 
+---
+
+# References
+
+Axelsen, Holger Bock, and Robert Glück. "What do reversible programs compute?." FoSSaCS. 2011.
+Yokoyama, Tetsuo, and Robert Glück. "A reversible programming language and its invertible self-interpreter." Proceedings of the 2007 ACM SIGPLAN symposium on Partial evaluation and semantics-based program manipulation. ACM, 2007.
+
+---
+
+# Questions
+
+\tiny{From CodeComics.com, modified. }
+![The life of a Janus programmer.](img/meme.png "The life of a Janus programmer."){ width=94% }
+
+
 <!-- Local Variables:  -->
 <!-- pandoc/write: beamer -->
 <!-- pandoc/latex-engine: "xelatex" -->
