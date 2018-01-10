@@ -3,9 +3,109 @@ author: Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, 
 title: Concepts of programming languages
 subtitle: Janus
 theme: uucs
-mainfont: Ubuntu Light
-sansfont: Ubuntu Light
+mainfont: Fira Sans Light
+monofont: Fira Mono
+sansfont: Fira Sans Light
+monofontoptions: Scale=0.75
+
 ---
+
+# Motivations
+
+What are reasons to pursue logically reversible computations?
+
+...
+* More heat efficient circuitry
+...
+* Quantum computing
+
+# A small detour
+
+Let's venture into the realm of physics ...
+
+Imagine a set of balls bouncing around in a frictionless world:
+
+# Bouncing balls 1
+
+![bouncing balls in a world without friction](img/frictionless.png){width=40%}
+
+...
+
+All information about both future and past configurations is preserved.
+
+# Bouncing balls 2
+
+![bouncing balls in the real world](img/friction.png){width=40%}
+
+...
+
+Information about past configurations gets lost as the balls lose velocity.
+
+---
+
+This information is not truely lost, however.
+
+... 
+
+Entropy of the system must increase or remain equal. In this case, **heat** is
+dissipated into the environment.
+
+---
+
+# Landauer's principle
+
+In computers, information about past states is often lost (or erased) as computations
+are carried out. 
+
+...
+
+However, the second law of thermodynamics still applies. 
+
+---
+
+This means that circuits *must* dissipate some amount of heat as information gets destroyed. 
+
+...
+
+Commonly refered to as **Landauer's principle**. 
+
+# Reversible computing
+
+![Billiard ball AND-gate](img/and.gif){width=75%}
+
+This is also refered to as a **Toffoli gate**. 
+
+---
+
+Toffoli gates are mainly theoretical
+
+...
+
+But ciruits with energy dissipation below the von Neumann-Landauer limit have been built. 
+
+# Quantum Computing
+
+How does all this apply to quantum physics?
+
+The underlying physical processes of quantum computing are actually fundamentally reversible.
+
+---
+
+Similar to the frictionless billiard ball gate, information cannot leave a quantum circuit in the 
+form of heat. 
+
+The system is said to bo **locigally reversible**.
+
+# Logical reversiblity 
+
+Since all logical information is preserved in such systems, it is imposible to carry out certain computations
+
+Specifically, it is impossible to carry out computations that reach a logical state that can also be reached through
+other paths of computation. 
+
+...
+
+Notice the similarity with reversible Turing machines!
 
 # Relational Programming
 \small
