@@ -3,9 +3,124 @@ author: Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, 
 title: Concepts of programming languages
 subtitle: Janus
 theme: uucs
-mainfont: Ubuntu Light
-sansfont: Ubuntu Light
+monofontoptions: Scale=0.75
+monofont: Fira Mono
+mainfont: Fira Sans Light
+sansfont: Fira Sans Light
+
+
 ---
+
+
+# Calculating (n+1)-th and (n+2)-th Fibonacci number
+
+
+```haskell
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2     ; -- Why do we need this?
+```
+
+
+---
+
+
+# Calculating (n+1)-th and (n+2)-th Fibonacci number
+
+
+```haskell
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2     ; -- Why do we need this?
+```
+
+* Q: How do we calculate the inverse?
+
+
+---
+
+
+# Calculating (n+1)-th and (n+2)-th Fibonacci number
+
+
+```haskell
+procedure fib
+	if n = 0 then
+		x1 += 1    ; -- 1st Fib nr is 1.
+		x2 += 1    ; -- 2nd Fib nr is 1.
+	else
+		n -= 1
+		call fib
+		x1 += x2
+		x1 <=> x2
+	fi x1 = x2     ; -- To be able to invert the procedure.
+```
+
+* Q: How do we calculate the inverse?
+* A: Using the statement inverter.
+![The statement inverter for Janus if statements.](img/if-inverse.png "The statement inverter for Janus if statements."){ width=100% }
+
+
+---
+
+
+# Calculating (n+1)-th and (n+2)-th Fibonacci number
+## The inverse of fib calculates n given the (n+1)-th and (n+2)-th Fibonacci numbers
+
+
+```haskell
+procedure fib'       ; -- The inverse of fib.
+	if x1 = x2 then
+		x2 -= 1      ; -- 2nd Fib nr is 1.
+		x1 -= 1      ; -- 1st Fib nr is 1.
+	else
+		x1 <=> x2
+		x1 -= x2
+		call fib'
+		n += 1
+	fi n = 0
+```
+
+
+---
+
+
+# Example 2: Probability Density Function of Exp distribution.
+
+* CDF of exp: $\frac{1}{b} e^ {\frac{−-x}{b}}$
+* But Janus doesn't allow negative integers, so:
+* PDF of exp: $\frac{1}{b} {\frac{1}{e^{\frac{x}{b}}}}$
+* Let's also introduce a parameter $\lambda = \frac{1}{b}$:
+* PDF of exp: $\lambda {\frac{1}{e^{x\lambda}}}$
+* PDF of exp: ${\frac{\lambda}{e^{x\lambda}}}$
+* This is still most probably going to be a real number...
+* Solution: multiply everything times a very large constant
+
+
+---
+
+
+# Example 2: Probability Density Function of Exp distribution.
+
+* PDF of exp: ${\frac{\lambda}{e^{x\lambda}}}$
+
+```haskell
+
+
 
 # Relational Programming
 \small
