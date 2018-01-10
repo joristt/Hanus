@@ -14,7 +14,7 @@ sansfont: Fira Sans Light
 
 # Janus
 
-A reversible programming language
+A reversible programming language.
 
 Not turing complete!
 
