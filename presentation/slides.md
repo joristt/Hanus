@@ -222,6 +222,7 @@ procedure fibInverse
 # References
 
 Axelsen, Holger Bock, and Robert Glück. "What do reversible programs compute?." FoSSaCS. 2011.
+Yokoyama, Tetsuo, and Robert Glück. "A reversible programming language and its invertible self-interpreter." Proceedings of the 2007 ACM SIGPLAN symposium on Partial evaluation and semantics-based program manipulation. ACM, 2007.
 
 ---
 
