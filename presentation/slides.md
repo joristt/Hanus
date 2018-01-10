@@ -217,6 +217,20 @@ procedure fibInverse
 	fi n = 0
 ```
 
+---
+
+# References
+
+Axelsen, Holger Bock, and Robert Glück. "What do reversible programs compute?." FoSSaCS. 2011.
+
+---
+
+# Questions
+
+\tiny{From CodeComics.com, modified. }
+![The life of a Janus programmer.](img/meme.png "The life of a Janus programmer."){ width=94% }
+
+
 <!-- Local Variables:  -->
 <!-- pandoc/write: beamer -->
 <!-- pandoc/latex-engine: "xelatex" -->
