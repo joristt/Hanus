@@ -41,10 +41,8 @@ evalProgram p@(Program decls) = do
     x  <- entry nameFwd nameBwd
     -- generate pattern for program state
     pt <- statePattern globalVars
-    -- generate function declarations for all procedures in program
-    st <- stateTypeDec
     fdecs <- mapM (evalProcedure pt) procedures
-    return $ (st:x:fdecs)
+    return $ (x:fdecs)
     where procedures = getProcedures p
           globalVars = getVariableDecs p
           -- generates the program entry point
@@ -81,22 +79,6 @@ getMain decs = do
         return (AppE exp el)) name args
     return x
 
-stateTypeDec :: [Declaration] -> Q (Dec, String)
-stateTypeDec vars = do
-    let typeVars = map (foldType algebra) vars
-    tyName <- newName "GlobalState"
-    return $ TySynD tyName []
-        where algebra = ((\_ _ x -> x),
-                         (\x y -> x ++ y),
-                         (\x _ -> x),
-                         (\x _ y -> x ++ y),
-                         (\x _ y -> x ++ y),
-                         id,
-                         (\x -> case x of 
-                                    (VarT n)  -> [n]
-                                    otherwise -> []
-                        )) 
-
 -- Generate a pattern that represents the program state 
 statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
@@ -111,7 +93,7 @@ evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
 -- Evaluate a procedure to it's corresponding TH representation
 evalProcedure :: [Pat] -> Declaration -> Q Dec
 evalProcedure globalArgs (Procedure n vs b) = do
-    let name = namify n
+    let name = nameId n
     inputArgs <- mapM varToPat vs
     let pattern = TupP (globalArgs ++ inputArgs)
     body <- evalProcedureBody b pattern
@@ -243,22 +225,4 @@ getVariableDecs (Program decs) = filter filterVars decs
 variableNames :: Program -> [String]
 variableNames program = map varToName (getVariableDecs program)
     where varToName (GlobalVarDeclaration (Variable (Identifier n) _) _) = n
-
-type TypeAlgebra t = ([TyVarBndr] -> Cxt -> t -> t,  -- ForallT
-                      t -> t -> t,                   -- AppT
-                      t -> Kind -> t,                -- SigT
-                      t -> Name -> t -> t,           -- InfixT
-                      t -> Name -> t -> t,           -- UInfixT
-                      t -> t,                        -- ParensT
-                      Type -> t)                     -- Other
-
-foldType :: TypeAlgebra t -> Type -> t
-foldType (forallt, appt, sigt, infixt, uinfixt, parenst, other) = fold
-    where fold (ForallT a b tp) = forallt a b (fold tp)
-          fold (AppT t1 t2)     = appt (fold t1) (fold t2)
-          fold (SigT t k)       = sigt (fold t) k
-          fold (InfixT t1 n t2) = infixt (fold t1) n (fold t2)
-          fold (UInfixT t1 n t2)= uinfixt (fold t1) n (fold t2)
-          fold (ParensT t)      = parenst (fold t)
-          fold x                = other x
 
