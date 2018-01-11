@@ -10,7 +10,7 @@ data Declaration = GlobalVarDeclaration Variable Exp
 
 data Variable = Variable Identifier Type
 
-newtype Identifier = Identifier String deriving (Show, Eq, Ord)
+newtype Identifier = Identifier String
 
 data LHS = LHSIdentifier Identifier
          | LHSArray LHS Exp
@@ -57,7 +57,7 @@ instance Show Program where
   show (Program decls) = intercalate "\n" $ map show decls
 
 instance Show Declaration where
-  show (GlobalVarDeclaration var) = "Decl: " ++ show var
+  show (GlobalVarDeclaration var exp) = "Decl: " ++ show var
   show (Procedure identifier variables blocks) = "procedure " ++ show identifier ++ " (" ++ intercalate "," (map show variables) ++ ")\n" ++ intercalate "\n" (map show blocks)
 
 instance Show Variable where
