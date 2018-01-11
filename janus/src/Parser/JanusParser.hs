@@ -111,7 +111,7 @@ pStatement
   <|> pLocalVariable
 
 pAssignment :: Parser Statement
-pAssignment = (\x y z -> Assignment y x (Just z)) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignment = (\x y z -> Assignment y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
 pOperator = 
@@ -142,7 +142,7 @@ pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing <* pSpaces
+pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
 
 pCall :: Parser Statement
 pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <* pSpaces

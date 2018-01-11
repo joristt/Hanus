@@ -21,7 +21,7 @@ type Block = [Statement]
 data Statement
   -- x y s= exp
   -- pop x y
-  = Assignment String [LHS] (Maybe Exp)
+  = Assignment String [LHS] Exp
   -- call name x y
   | Call Identifier [LHS]
   -- uncall name x y
