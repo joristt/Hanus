@@ -27,6 +27,7 @@ cabal.project.local
 *.gz
 *.bbl
 *.blg
+**.dvi
 proposal/_minted-proposal/
 proposal/*.pdf
 intermediate/_minted-intermediate/

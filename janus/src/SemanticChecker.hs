@@ -36,7 +36,7 @@ rhsCheck (Program decls) =
         all rhsCheckB [b, b']
       (LocalVarDeclaration _ _ b _) ->
         rhsCheckB b
-      (Assignment _ lhs (Just e)) ->
+      (Assignment _ lhs e) ->
         all (`notElem` usedVars) names
         where
           (names, es) = fmap concat $ unzip $ map lhsInfo lhs

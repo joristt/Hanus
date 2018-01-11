@@ -111,7 +111,7 @@ pStatement
   <|> pLocalVariable
 
 pAssignment :: Parser Statement
-pAssignment = (\x y z -> Assignment y x (Just z)) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignment = (\x y z -> Assignment y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
 pOperator = 
@@ -126,21 +126,23 @@ pSomeLHS :: Parser [LHS]
 pSomeLHS = (:) <$> pLHS <*> pList_ng (pSomeSpace *> pLHS)
 
 pLHS :: Parser LHS
-pLHS = pLHSIdentifier {-
-    <|> pLHSArray
-    <|> pLHSField -}
+pLHS = f <$> pIdentifier <*> pList_ng pLHSPart
+  where
+    f :: Identifier -> [Either Identifier Exp] -> LHS
+    f name parts = foldl add (LHSIdentifier name) parts
+    add :: LHS -> (Either Identifier Exp) -> LHS
+    add prev (Left identifier) = LHSField prev identifier
+    add prev (Right indexer)   = LHSArray prev indexer
+    pLHSPart :: Parser (Either Identifier Exp)
+    pLHSPart
+      =   Left <$ pSpaces <* pKey "." <*> pIdentifier
+      <|> Right <$ pSpaces <* pKey "[" <*> (fst <$> pExp ["]"])
 
 pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier
 
-pLHSArray :: Parser LHS
-pLHSArray = LHSArray <$> pLHS <* pSpaces <* pKey "[" <*> (fst <$> pExp ["]"])
-
-pLHSField :: Parser LHS
-pLHSField = LHSField <$> pLHS <* pKey "." <*> pIdentifier
-
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <*> pReturn Nothing <* pSpaces
+pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) `micro` 1 <* pSpaces <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
 
 pCall :: Parser Statement
 pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <* pSpaces
