@@ -4,6 +4,7 @@ module Eval where
 
 import AST
 import StdLib.Operator
+import StdLib.DefaultValue
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
@@ -21,8 +22,8 @@ trace x = Debug.trace (show x) x
 
 -- Example program for debugging purposes
 globvartype = ConT $ mkName "Int"
-globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
-globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 1))
+globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype)
+globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype)
 proc1 = Procedure (Identifier "main") [] [Assignment "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "substract") [LHSIdentifier (Identifier "glob_var2")]]
 proc2 = Procedure (Identifier "substract") [Variable (Identifier "arg1") globvartype] [(Assignment "-=" [LHSIdentifier (Identifier "glob_var1")] ((VarE . mkName) "glob_var2"))]
 p = Program [globvar1, globvar2, proc1, proc2]
@@ -64,16 +65,17 @@ letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
-genDec (GlobalVarDeclaration (Variable ident t) exp) = do 
-    let name = trace $ nameId ident
-    return (ValD (SigP (VarP name) t) (NormalB exp) []) 
+genDec (GlobalVarDeclaration (Variable ident t)) = do 
+    let name = nameId ident
+    defVal <- runQ [|defaultValue|]
+    return (ValD (SigP (VarP name) t) (NormalB (defVal)) []) 
 
 -- Generate an expression that calls the main function with all global 
 -- variables as state
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
     name <- [e|main|]
-    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _) _) -> 
+    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _)) -> 
         return ((VarE . mkName) x)) decs
     x <- foldM (\exp el -> 
         return (AppE exp el)) name args
@@ -82,20 +84,14 @@ getMain decs = do
 -- Generate a pattern that represents the program state 
 statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
-    where toPat (GlobalVarDeclaration var _) = varToPat var
-
--- Evaluate a global variable declaration to TH representation
-evalGlobalVarDeclaration :: Declaration -> Q Stmt
-evalGlobalVarDeclaration (GlobalVarDeclaration (Variable n t) e) = do
-    let name = nameId n
-    return $ LetS [ValD (VarP name) (NormalB e) []]
+    where toPat (GlobalVarDeclaration var) = varToPat var
 
 -- Evaluate a procedure to it's corresponding TH representation
 evalProcedure :: [Pat] -> Declaration -> Q Dec
 evalProcedure globalArgs (Procedure n vs b) = do
     let name = nameId n
-    inputArgs <- mapM varToPat vs
-    let pattern = TupP (globalArgs ++ inputArgs)
+    let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
+    let pattern = TupP (globalArgs)
     body <- evalProcedureBody b pattern
     return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
 
@@ -179,7 +175,7 @@ evalIf pattern g tb eb = do
                         |                                     v
                          ---------------------------------- False -}
 evalWhile :: Pat -> Exp -> Exp -> [Statement] -> Q ([Stmt], Dec)
-evalWhile pattern fromGuard untilGuard doStmts loopStmt
+evalWhile fromGuard untilGuard doStmts loopStmt
     = undefined
 
 -- *** HELPERS *** ---
@@ -228,11 +224,11 @@ replace a b (x:xs) | a == x    = b:xs
 getVariableDecs :: Program -> [Declaration]
 getVariableDecs (Program decs) = filter filterVars decs
     where filterVars dec  = case dec of 
-                                GlobalVarDeclaration _ _ -> True
-                                otherwise                -> False
+                                GlobalVarDeclaration _ -> True
+                                otherwise              -> False
 
 -- Gets all the names of the global variables in the program
 variableNames :: Program -> [String]
 variableNames program = map varToName (getVariableDecs program)
-    where varToName (GlobalVarDeclaration (Variable (Identifier n) _) _) = n
+    where varToName (GlobalVarDeclaration (Variable (Identifier n) _)) = n
 

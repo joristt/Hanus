@@ -5,7 +5,7 @@ import Data.List
 
 newtype Program = Program [Declaration]
 
-data Declaration = GlobalVarDeclaration Variable Exp
+data Declaration = GlobalVarDeclaration Variable
                  | Procedure Identifier [Variable] Block
 
 data Variable = Variable Identifier Type
@@ -57,7 +57,7 @@ instance Show Program where
   show (Program decls) = intercalate "\n" $ map show decls
 
 instance Show Declaration where
-  show (GlobalVarDeclaration var exp) = "Decl: " ++ show var
+  show (GlobalVarDeclaration var) = "Decl: " ++ show var
   show (Procedure identifier variables blocks) = "procedure " ++ show identifier ++ " (" ++ intercalate "," (map show variables) ++ ")\n" ++ intercalate "\n" (map show blocks)
 
 instance Show Variable where
