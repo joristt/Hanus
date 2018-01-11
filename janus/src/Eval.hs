@@ -23,7 +23,7 @@ trace x = Debug.trace (show x) x
 globvartype = ConT $ mkName "Int"
 globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype) (LitE (IntegerL 10))
 globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype) (LitE (IntegerL 1))
-proc1 = Procedure (Identifier "main") [] [Assignement "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "substract") [LHSIdentifier (Identifier "glob_var1")]]
+proc1 = Procedure (Identifier "main") [] [Assignement "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "substract") [LHSIdentifier (Identifier "glob_var2")]]
 proc2 = Procedure (Identifier "substract") [Variable (Identifier "arg1") globvartype] [(Assignement "-=" [LHSIdentifier (Identifier "glob_var1")] ((VarE . mkName) "glob_var2"))]
 p = Program [globvar1, globvar2, proc1, proc2]
 
