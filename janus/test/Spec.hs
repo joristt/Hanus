@@ -1,12 +1,13 @@
 import Test.Framework (defaultMain, testGroup)
 import Test.Framework.Providers.HUnit
-import Test.HUnit
-
-import TArith
+import TQQ
+import TSemanticChecker
 
 main = defaultMain
   [ constructTestSuite testName testSuite
-  | (testName, testSuite) <- [ ("ARITH", arithTests)
+  | (testName, testSuite) <- [ ("VAR", varTests)
+                             , ("SEM", semanticTests)
+                             , ("QQ", qqTests)
                              ]
   ]
 

@@ -19,6 +19,7 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+**.stylish-haskell.yaml
 # Latex
 *.aux
 *.log
@@ -28,4 +29,6 @@ cabal.project.local
 *.blg
 proposal/_minted-proposal/
 proposal/*.pdf
+intermediate/_minted-intermediate/
+intermediate/*.pdf
 
