@@ -169,8 +169,18 @@ evalIf pattern g tb eb = do
             stmts <- concatMapM (evalStatement pattern) branch
             return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
 
-evalWhile :: Pat -> Exp -> [Statement] -> Q ([Stmt], Dec)
-evalWhile pattern guard body = undefined
+
+{- Flow of a loop is: 
+   fromGuard True -> doStmts -> untilGuard == True -> loop successfully terminates
+                        ^            |
+                        |            v
+                        |          False -> loopStmts -> fromGuard True -> error.
+                        |                                     |
+                        |                                     v
+                         ---------------------------------- False -}
+evalWhile :: Pat -> Exp -> Exp -> [Statement] -> Q ([Stmt], Dec)
+evalWhile pattern fromGuard untilGuard doStmts loopStmt
+    = undefined
 
 -- *** HELPERS *** ---
 
