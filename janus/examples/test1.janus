@@ -1,9 +1,10 @@
 x :: Int;
+y :: Int;
+z :: Int;
 
-procedure main(x::Int, y::Int->String)
+procedure janusmain()
 {
-    x += 3;
-    y ^= 1;
-    call f x y;
-    swap x y;
+    x += 1;
+    y -= 2;
+    z += 3;
 }

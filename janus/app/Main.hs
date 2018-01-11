@@ -5,8 +5,6 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Arith.AST
-import Arith.QQ (arith)
 import Parser.JanusParser
 
 -- | Command-line options.

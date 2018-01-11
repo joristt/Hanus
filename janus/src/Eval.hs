@@ -10,7 +10,6 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 
 import Control.Monad
-import Control.Monad.State
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -30,13 +29,13 @@ p = Program [globvar1, globvar2, proc1, proc2]
 
 -- Generates program entry points for running the program both forward and backward, as well as
 -- function declarations for all procedures in the janus program. 
---
+--O
 -- The purpose of this function is to generate a TH object that represents a program equivalent 
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
 -- another file  
 evalProgram :: Program -> Q [Dec]
 evalProgram p@(Program decls) = do  
-    nameFwd <- newName "run"
+    let nameFwd = mkName "run"
     nameBwd <- newName "run_bwd"
     -- generate program entry point ('run' function)
     x  <- entry nameFwd nameBwd
@@ -74,7 +73,7 @@ genDec (GlobalVarDeclaration (Variable ident t)) = do
 -- variables as state
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
-    name <- [e|main|]
+    name <- [e|janusmain|]
     args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _)) -> 
         return ((VarE . mkName) x)) decs
     x <- foldM (\exp el -> 

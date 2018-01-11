@@ -19,6 +19,7 @@ library
                      , Parser.JanusParser
                      , Parser.HaskellParser
                      , SemanticChecker
+                     , Eval
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , optparse-applicative
