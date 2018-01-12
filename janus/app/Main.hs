@@ -1,16 +1,18 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE QuasiQuotes #-}
-
+{-# LANGUAGE DoAndIfThenElse #-}
 module Main where
 
-import Options.Applicative
+import Criterion.Main
 import Data.Semigroup ((<>))
-import Parser.JanusParser
-
-import Parser.JanusParser
+import Options.Applicative
+import System.Environment (withArgs)
+import Parser.JanusParser (parser)
 
 -- | Command-line options.
-newtype Options = Options { inputFile :: String }
+data Options = Options
+  { inputFile :: String
+  , benchmark :: Bool
+  , output    :: String
+  }
 
 -- | Parsing of command-line options.
 parseOptions :: Parser Options
@@ -21,14 +23,36 @@ parseOptions = Options
       <> metavar "STRING"
       <> help "Janus source file"
       )
+  <*> option auto
+      (  short 'b'
+      <> long "benchmark"
+      <> showDefault
+      <> value False
+      <> metavar "BOOl"
+      <> help "Run benchmark"
+      )
+  <*> option auto
+      (  short 'o'
+      <> long "output"
+      <> showDefault
+      <> value "report.html"
+      <> metavar "STR"
+      <> help "Output file for benchmark"
+      )
+
+withInfo :: Parser a -> String -> ParserInfo a
+withInfo opts desc = info (helper <*> opts) $ progDesc desc
 
 -- | Main.
 main :: IO ()
 main = run =<< execParser (parseOptions `withInfo` "Janus DSL")
-  where
-    withInfo :: Parser a -> String -> ParserInfo a
-    withInfo opts desc = info (helper <*> opts) $ progDesc desc
-    run :: Options -> IO ()
-    run (Options inputFile) = do
-      prog <- readFile inputFile
-      print $ parser "" 0 0 prog
+
+-- | Run.
+run :: Options -> IO ()
+run (Options inputFile benchmark output) =
+  if benchmark then
+    withArgs ["-o", output] $
+      defaultMain [bgroup inputFile [bench "1" $ nfIO go]]
+  else go
+  where go = do prog <- readFile inputFile
+                print $ parser "" 0 0 prog

@@ -40,6 +40,7 @@ executable janus
   build-depends:       base
                      , janus
                      , optparse-applicative
+                     , criterion
   default-language:    Haskell2010
 
 test-suite janus-test
