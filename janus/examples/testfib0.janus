@@ -16,8 +16,24 @@ procedure fib()
     fi xa==xb;
 }
 
-procedure fiblarge()
+procedure fibsmall()
+{
+    n += 2;
+    call fib;
+}
+
+procedure fibmedium()
 {
     n += 10;
     call fib;
+}
+
+procedure fiblarge()
+{
+    n += 100;
+    from x == 0 do
+      call fib;
+      uncall fib;
+      x += 1;
+    until x == 1000;
 }

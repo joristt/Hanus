@@ -1,14 +1,3 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes, FlexibleContexts #-}
-
-module RLE where
-
-import QQ
-import StdLib.Operator
-import StdLib.DefaultValue
-
-import Debug.Trace
-
-[hanusT|
 procedure encode(text :: [Int], arc :: [Int]){
     from (text /= []) && arc == [] do
         local val :: Int = 0;
@@ -30,4 +19,3 @@ procedure encode(text :: [Int], arc :: [Int]){
 procedure main(text :: [Int], arc :: [Int]){
     call encode text arc;
 }
-|]
