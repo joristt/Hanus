@@ -75,4 +75,4 @@ semanticTests =
           InfixE (Just $ index x') plus (Just one)
         asgF3 = LHSArray (LHSIdentifier x) (index x') .+= one
         asgT2 = LHSArray (LHSIdentifier x) (index y') .+= one
-        (.+=) e e' = Assignment "+=" [e] (Just e')
+        (.+=) e = Assignment False "+=" [e]

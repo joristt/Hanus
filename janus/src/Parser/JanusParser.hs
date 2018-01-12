@@ -11,7 +11,7 @@ import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Utils
 import Language.Haskell.TH.Syntax
 
-keywords = 
+keywords =
   [
     "procedure",
     "call",
@@ -20,7 +20,7 @@ keywords =
     "do",
     "until",
     "loop",
-    "if", 
+    "if",
     "then",
     "else",
     "fi",
@@ -39,7 +39,7 @@ parser1 p fileName line col s = parse_h (assertNoError <$> p <*> pEnd) $ createS
     assertNoError _ (e:es) = error $ "Parsing of Janus code failed in file " ++ fileName ++ ". First error:\n" ++ show e
 
 parser2 :: Parser a -> String -> a
-parser2 p s = parser1 p "input" 0 0 s
+parser2 p = parser1 p "input" 0 0
 
 pSomeSpace :: Parser String
 pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) <*> pSpaces
@@ -111,10 +111,10 @@ pStatement
   <|> pLocalVariable
 
 pAssignment :: Parser Statement
-pAssignment = (\x y z -> Assignment y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
+pAssignment = (\x y z -> Assignment False y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pOperator :: Parser String
-pOperator = 
+pOperator =
     (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
     <|> pSym '`' *> pName <* pSym '`'
   where
@@ -129,8 +129,8 @@ pLHS :: Parser LHS
 pLHS = f <$> pIdentifier <*> pList_ng pLHSPart
   where
     f :: Identifier -> [Either Identifier Exp] -> LHS
-    f name parts = foldl add (LHSIdentifier name) parts
-    add :: LHS -> (Either Identifier Exp) -> LHS
+    f name = foldl add (LHSIdentifier name)
+    add :: LHS -> Either Identifier Exp -> LHS
     add prev (Left identifier) = LHSField prev identifier
     add prev (Right indexer)   = LHSArray prev indexer
     pLHSPart :: Parser (Either Identifier Exp)
@@ -142,14 +142,14 @@ pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) `micro` 1 <* pSpaces <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
+pPrefixOperatorAssignment = Assignment False <$> pName <*> pList_ng (pSomeSpace *> pLHS) `micro` 1 <* pSpaces <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
 
 pCall :: Parser Statement
 pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <* pSpaces
 
-pLocalVariable :: Parser Statement 
-pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
-                    (fst <$> pVariable ["="]) <*> (fst <$> pExp [";"]) <*> 
+pLocalVariable :: Parser Statement
+pLocalVariable = LocalVarDeclaration <$ pKey "local" <*>
+                    (fst <$> pVariable ["="]) <*> (fst <$> pExp [";"]) <*>
                     pBlock <*
                     pKey "delocal" <*> (fst <$> pExp [";"])
 
@@ -159,7 +159,7 @@ pIf = If <$ pToken "if" <* pSomeSpace
   <*> pElse <* pSpaces <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
   <* pSpaces
   where
-    pElse = 
+    pElse =
         -- With 'else'
         (pToken "else" *> pBlock)
         <<|>
@@ -190,4 +190,3 @@ pLoopAfterLoop = (\b e -> (b, e)) <$> pBlock <* pSpaces <* pToken "until" <* pSp
 
 pLoopAfterUntil :: Parser Exp
 pLoopAfterUntil = fst <$> pExp [";"] <* pSpaces
-
