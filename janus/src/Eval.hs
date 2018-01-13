@@ -94,6 +94,20 @@ evalProcedure globalArgs (Procedure n vs b) = do
     body <- evalProcedureBody b pattern
     return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
 
+-- Evaluate a procedure to it's corresponding TH representation
+evalProcedure2 :: [Pat] -> Name -> [Variable] -> [Stmt] -> Q Dec
+evalProcedure2 globalArgs name vs stmts = do
+    let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
+    let pattern = TupP (globalArgs)
+    body <- evalProcedureBody2 stmts pattern
+    return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
+
+-- Evaluates a procedure body (== Block (note that type Block = [Statement]))
+evalProcedureBody2 :: [Stmt] -> Pat -> Q Body
+evalProcedureBody2 stmts pattern = do
+    return $ NormalB $ DoE $ stmts ++ [returnTup]
+        where returnTup = NoBindS $ tupP2tupE pattern
+
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 evalProcedureBody :: [Statement] -> Pat -> Q Body
 evalProcedureBody ss pattern = do
@@ -103,7 +117,7 @@ evalProcedureBody ss pattern = do
 
 -- Evaluate a statement from a janus program to it's corresponding TH representation
 evalStatement :: Pat -> Statement -> Q [Stmt]
-evalStatement _ (Assignment op lhss expr)          = evalAssignments op lhss expr
+evalStatement _ (Assignment op lhss expr)           = evalAssignments op lhss expr
 evalStatement p (Call (Identifier i) args)          = evalFunctionCall p i args
 evalStatement p (If exp tb eb _)                    = evalIf p exp tb eb
 evalStatement p (LoopUntil from d l until)          = undefined
@@ -151,6 +165,29 @@ evalFunctionCall pattern name args = do
                           ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) pattern)
                                     
 
+evalFunctionCallWithName :: Pat -> Name -> [LHS] -> Q [Stmt]
+evalFunctionCallWithName pattern name args = do
+    tmpN <- newName "tmp"
+    f <- foldM (\exp pat -> do
+                    arg <- expFromVarP pat
+                    return (AppE exp arg))
+         (VarE name) pattern'
+    x <- argsE
+    f' <- foldM (\x a -> return $ AppE x a) f x
+    return [letStmt (VarP tmpN) f', letStmt pattern (VarE tmpN)]
+    where pattern' = (unwrapTupleP pattern)
+          argsE = do
+            x <- mapM (\(LHSIdentifier (Identifier n)) -> argE (mkName n)) args
+            return x
+            where argE   n = do
+                    x <- argSet n
+                    return $ TupE [argGet n, x]
+                  argGet n = LamE [pattern] (VarE n)
+                  argSet n = do
+                      vName <- newName "v"
+                      return $ LamE [VarP vName, pattern]
+                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) pattern)
+
 -- Evaluate a janus 'if' statement to it's corresponding TH representation
 evalIf :: Pat -> Exp -> [Statement] -> [Statement] -> Q [Stmt]
 evalIf pattern g tb eb = do
@@ -164,18 +201,55 @@ evalIf pattern g tb eb = do
             stmts <- concatMapM (evalStatement pattern) branch
             return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
 
+evalIf2 :: Pat -> Exp -> [Stmt] -> [Stmt] -> Q [Stmt]
+evalIf2 pattern g tb eb = do
+    b1   <- evalBranch tb
+    b2   <- evalBranch eb
+    tmpN <- newName "tmp"
+    let ifExp  = CondE g b1 b2
+    let ifStmt = letStmt (VarP tmpN) ifExp
+    return $ [ifStmt, letStmt pattern (VarE tmpN)]
+    where evalBranch stmts = do 
+            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
 
 {- Flow of a loop is: 
-   fromGuard True -> doStmts -> untilGuard == True -> loop successfully terminates
-                        ^            |
-                        |            v
-                        |          False -> loopStmts -> fromGuard True -> error.
-                        |                                     |
-                        |                                     v
-                         ---------------------------------- False -}
-evalWhile :: Pat -> Exp -> Exp -> [Statement] -> Q ([Stmt], Dec)
-evalWhile fromGuard untilGuard doStmts loopStmt
-    = undefined
+      fromGuard True -> doStmts -> untilGuard True -> loop successfully terminates
+          |                ^            |
+          v                |            |
+        False              |            |
+          |                |            |
+          v                |            v
+        error              |          False -> loopStmts -> fromGuard True -> error.
+                           |                                     |
+                           |                                     v
+                           ----------------------------------- False
+-}
+evalWhile :: Pat -> Exp -> Exp -> [Statement] -> [Statement] -> Q ([Stmt], Dec)
+evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements = do
+    whileProcName <- newName "while"
+
+    whileProcCall <- evalFunctionCallWithName pTup whileProcName [] -- the empty list here shouldn't be empty.
+    -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
+    err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
+    whileIf       <- evalIf2 pTup fromGuard whileProcCall [NoBindS err]
+
+    err                   <- runQ [|error "From-guard in while loop was true after at least one iteration."|]
+    whileProcLoopIf       <- evalIf2 pTup fromGuard [NoBindS err] whileProcCall
+    loopStmts             <- evalStmts loopStatements
+    let whileProcLoopBlock = loopStmts ++ whileProcLoopIf
+
+    whileProcDoIf       <- evalIf2 pTup untilGuard [] whileProcLoopBlock
+    doStmts             <- evalStmts doStatements
+    let whileProcDoBlock = doStmts ++ whileProcDoIf
+
+    let whileProcBlock = whileProcDoBlock ++ whileProcLoopBlock
+    whileProcDec      <- evalProcedure2 patList whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
+    
+    return (whileIf, whileProcDec)
+
+    where evalStmts stmts = do
+              stmts <- concatMapM (evalStatement pTup) stmts
+              return $ stmts ++ [(NoBindS (tupP2tupE pTup))]
 
 -- *** HELPERS *** ---
 
