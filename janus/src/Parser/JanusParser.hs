@@ -41,9 +41,6 @@ parser1 p fileName line col s = parse_h (assertNoError <$> p <*> pEnd) $ createS
 parser2 :: Parser a -> String -> a
 parser2 p s = parser1 p "input" 0 0 s
 
-foo = "if True then x += 1; else swap x y; fi 2 * 3 == 6;"
-bar = "if n==10 then n+= 10; fi n == 20;"
-
 isIf (If _ _ _ _) = True
 isIf _ = False
 
@@ -99,13 +96,11 @@ pProcedure = Procedure
   <*> pVariableList
   <*  pSpaces
   <*  pKey "{"
-  <*> pBlock
-  <*  pSpaces
-  <*  pKey "}"
-            where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
+  <*> (fst <$> pBlock (pToken "}"))
+    where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
 
-pBlock :: Parser Block
-pBlock = pList_ng pStatement
+pBlock :: Parser a -> Parser (Block, a)
+pBlock p = (\a -> ([], a)) <$> p <|> ((\x (y, a) -> (x : y, a)) <$> pStatement <*> pBlock p) `micro` 1
 
 pStatement :: Parser Statement
 pStatement
@@ -129,10 +124,13 @@ pOperator =
     firstChar = "!#$%&*+./<=>?@\\^|-~"
 
 pSomeLHS :: Parser [LHS]
-pSomeLHS = (:) <$> pLHS <*> pList_ng (pSomeSpace *> pLHS)
+pSomeLHS = (:) <$> pLHS <*> (
+    pSomeSpace *> (pSomeLHS <<|> pReturn [])
+    <<|> pReturn []
+  )
 
 pLHS :: Parser LHS
-pLHS = f <$> pIdentifier <*> pList_ng pLHSPart
+pLHS = f <$> pIdentifier <*> pList pLHSPart
   where
     f :: Identifier -> [Either Identifier Exp] -> LHS
     f name parts = foldl add (LHSIdentifier name) parts
@@ -141,59 +139,43 @@ pLHS = f <$> pIdentifier <*> pList_ng pLHSPart
     add prev (Right indexer)   = LHSArray prev indexer
     pLHSPart :: Parser (Either Identifier Exp)
     pLHSPart
-      =   Left <$ pSpaces <* pKey "." <*> pIdentifier
-      <|> Right <$ pSpaces <* pKey "[" <*> (fst <$> pExp ["]"])
+      =   Left <$ pKey "." <*> pIdentifier
+      <|> Right <$ pKey "[" <*> (fst <$> pExp ["]"])
 
 pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignment <$> pName <*> pList_ng (pSomeSpace *> pLHS) `micro` 1 <* pSpaces <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
+pPrefixOperatorAssignment = Assignment <$> pName <* pSomeSpace <*> pSomeLHS `micro` 1 <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
 
 pCall :: Parser Statement
-pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList_ng (pSomeSpace *> pLHS) <* pSpaces <* pToken ";" <* pSpaces
+pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList (pSomeSpace *> pLHS) `micro` 1 <* pToken ";" <* pSpaces
 
 pLocalVariable :: Parser Statement 
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
-                    (fst <$> pVariable ["="]) <*> (fst <$> pExp [";"]) <*> 
-                    pBlock <*
-                    pKey "delocal" <*> (fst <$> pExp [";"])
+                    (fst <$> pVariable ["="]) <*> (fst <$> pExp [";"]) <* pSpaces <*>
+                    (fst <$> pBlock (pKey "delocal")) <*>
+                    (fst <$> pExp [";"])
 
 pIf :: Parser Statement
-pIf = If <$ pToken "if" <* pSomeSpace
-  <*> (fst <$> pExp ["then"]) <* pSomeSpace <*> pBlock <* pSpaces
-  <*> pElse <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
-  <* pSpaces
+pIf = (\(pre, _) (s1, s2) (post, _) -> If pre s1 s2 post) <$ pToken "if" <* pSomeSpace <*> pExp ["then"] <* pSomeSpace <*> pBlock pElse <* pSomeSpace <*> pExp [";"] <* pSpaces
   where
-    pElse = 
-        -- With 'else'
-        (pToken "else" *> pSomeSpace *> pBlock) <* pSpaces 
-        <|>
-        -- Without 'else'
-        return []
+    pElse :: Parser Block
+    pElse = pReturn [] <* pToken "fi" <* pSomeSpace <<|> pToken "else" *> pSomeSpace *> (fst <$> pBlock (pReturn () <* pToken "fi"))
 
 pLoop :: Parser Statement
-pLoop = addLength 10 (do
-    pToken "loop"
-    pSpaces
-    (exp, sep) <- pExp ["do", "loop", "until"]
-    pSpaces
-    (doBlock, loopBlock, untilExp) <- (case sep of
-        "do" -> pLoopAfterDo
-        "loop" -> (\(b, e) -> ([], b, e)) <$> pLoopAfterLoop
-        "until" -> (\e -> ([], [], e)) <$> pLoopAfterUntil) :: Parser (Block, Block, Exp)
-    return $ LoopUntil exp doBlock loopBlock untilExp
-    ) <* pSpaces
-
-pLoopAfterDo :: Parser (Block, Block, Exp)
-pLoopAfterDo = (\b1 (b2, e) -> (b1, b2, e)) <$ pSpaces <*> pBlock <* pSpaces <*> (
-    (pToken "loop" *> pLoopAfterLoop)
-    <<|> ((\e -> ([], e)) <$ pToken "until" <* pSpaces <*> pLoopAfterUntil)
-  )
-
-pLoopAfterLoop :: Parser (Block, Exp)
-pLoopAfterLoop = (\b e -> (b, e)) <$> pBlock <* pSpaces <* pToken "until" <* pSpaces <*> pLoopAfterUntil
-
-pLoopAfterUntil :: Parser Exp
-pLoopAfterUntil = fst <$> pExp [";"] <* pSpaces
-
+pLoop = pToken "from" *> pSomeSpace *> addLength 10 (do
+    (exp, sep) <- pExp ["do", "loop"]
+    pSomeSpace
+    if sep == "do" then do
+      (doBlock, (loopBlock, untilExp)) <- pBlock (
+          pToken "loop" *> pSomeSpace *> pLoopLoop
+          <<|> (\(untilExp, _) -> ([], untilExp)) <$ pToken "until" <* pSomeSpace <*> pExp [";"]
+        )
+      return $ LoopUntil exp doBlock loopBlock untilExp
+    else (\(loopBlock, untilExp) -> LoopUntil exp [] loopBlock untilExp) <$> pLoopLoop
+  ) <* pSpaces
+  where
+    -- Parses the part after the 'loop' keyword
+    pLoopLoop :: Parser (Block, Exp)
+    pLoopLoop = (\(loopBlock, (untilExp, _)) -> (loopBlock, untilExp)) <$> pBlock (pToken "until" *> pSomeSpace *> pExp [";"])
