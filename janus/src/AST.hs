@@ -72,6 +72,6 @@ instance Show LHS where
   show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
 
 instance Show Statement where
-  show (Assignment _ operator lhs exp ) = intercalate ", " (map show lhs) ++ operator ++ show exp
+  show (Assignment toReverse operator lhs exp ) = intercalate ", " (map show lhs) ++ (if toReverse then "~" else "") ++ operator ++ show exp
   show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ unwords (map show lhs)
