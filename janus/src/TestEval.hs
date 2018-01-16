@@ -13,14 +13,16 @@ import StdLib.Operator
 
 
 [hanusT|
-    n :: Int;
+    x :: Int;
 
-    procedure ifthen()
+    procedure foo()
     {
-        n += 10;
-        
-        if n==10 then
-            n += 10;
-        fi n==20;
+        call bar x;
+    }
+
+    procedure bar()
+    {
+        y += 1;
+        x += 1;
     }
 |]

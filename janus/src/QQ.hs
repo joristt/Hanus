@@ -36,9 +36,9 @@ hanusT = QuasiQuoter {
         runIO $ putStrLn "Started quoting"
         p <- runQQParserT prog
         runIO $ putStrLn  $ "parsing result: " ++ (show p)
-        r <- evalProgram p
+        r <- evalProgramT p
         runIO $ putStrLn $ pprint r
-        return []
+        return r
     }
 
 -- | Parse program by passing location info and doing semantic checking.

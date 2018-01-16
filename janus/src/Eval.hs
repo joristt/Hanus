@@ -132,8 +132,8 @@ evalAssignment :: Bool -> String -> [LHS] -> Exp -> Q [Stmt]
 evalAssignment direction op lhss exp = do
     let f = (VarE . mkName) op
     op' <- case direction of 
-               True  -> [|(\(Operator fwd _) -> fwd)|]
-               False -> [|(\(Operator _ bwd) -> bwd)|]
+               False -> [|(\(Operator fwd _) -> fwd)|]
+               True  -> [|(\(Operator _ bwd) -> bwd)|]
     let fApp = AppE (AppE (AppE op' f) arg) exp
     tmpN <- newName "tmp"
     return [letStmt (VarP tmpN) fApp, letStmt pat (VarE tmpN)]
