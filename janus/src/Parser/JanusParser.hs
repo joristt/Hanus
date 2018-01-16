@@ -41,6 +41,12 @@ parser1 p fileName line col s = parse_h (assertNoError <$> p <*> pEnd) $ createS
 parser2 :: Parser a -> String -> a
 parser2 p s = parser1 p "input" 0 0 s
 
+foo = "if True then x += 1; else swap x y; fi 2 * 3 == 6;"
+bar = "if n==10 then n+= 10; fi n == 20;"
+
+isIf (If _ _ _ _) = True
+isIf _ = False
+
 pSomeSpace :: Parser String
 pSomeSpace = (:) <$> pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 1) <*> pSpaces
 
@@ -99,7 +105,7 @@ pProcedure = Procedure
             where pVariableList = ([] <$ pToken ")") <<|> pNonEmptyArgumentList
 
 pBlock :: Parser Block
-pBlock = pList pStatement
+pBlock = pList_ng pStatement
 
 pStatement :: Parser Statement
 pStatement
@@ -156,13 +162,13 @@ pLocalVariable = LocalVarDeclaration <$ pKey "local" <*>
 pIf :: Parser Statement
 pIf = If <$ pToken "if" <* pSomeSpace
   <*> (fst <$> pExp ["then"]) <* pSomeSpace <*> pBlock <* pSpaces
-  <*> pElse <* pSpaces <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
+  <*> pElse <* pToken "fi" <* pSpaces <*> (fst <$> pExp [";"])
   <* pSpaces
   where
     pElse = 
         -- With 'else'
-        (pToken "else" *> pBlock)
-        <<|>
+        (pToken "else" *> pSomeSpace *> pBlock) <* pSpaces 
+        <|>
         -- Without 'else'
         return []
 
