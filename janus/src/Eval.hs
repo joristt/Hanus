@@ -119,7 +119,7 @@ evalProcedureBody ss pattern = do
 
 -- Evaluate a statement from a janus program to it's corresponding TH representation
 evalStatement :: Pat -> Statement -> Q [Stmt]
-evalStatement _ (Assignment op lhss expr)           = evalAssignment op lhss expr
+evalStatement _ (Assignment direction op lhss expr) = evalAssignment direction op lhss expr
 evalStatement p (Call (Identifier i) args)          = evalFunctionCall p i args
 evalStatement p (If exp tb eb _)                    = evalIf p exp tb eb
 evalStatement p (LoopUntil from d l until)          = undefined
@@ -128,10 +128,12 @@ evalStatement  _ _ = error "Statement not implementend"
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
 -- or more global variables in some way. 
-evalAssignment :: String -> [LHS] -> Exp -> Q [Stmt]
-evalAssignment op lhss exp = do
+evalAssignment :: Bool -> String -> [LHS] -> Exp -> Q [Stmt]
+evalAssignment direction op lhss exp = do
     let f = (VarE . mkName) op
-    op' <- [|(\(Operator fwd _) -> fwd)|]
+    op' <- case direction of 
+               True  -> [|(\(Operator fwd _) -> fwd)|]
+               False -> [|(\(Operator _ bwd) -> bwd)|]
     let fApp = AppE (AppE (AppE op' f) arg) exp
     tmpN <- newName "tmp"
     return [letStmt (VarP tmpN) fApp, letStmt pat (VarE tmpN)]

@@ -21,7 +21,7 @@ type Block = [Statement]
 data Statement
   -- x y s= exp
   -- pop x y
-  = Assignment String [LHS] Exp
+  = Assignment Bool String [LHS] Exp
   -- call name x y
   | Call Identifier [LHS]
   -- uncall name x y
@@ -72,6 +72,6 @@ instance Show LHS where
   show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
 
 instance Show Statement where
-  show (Assignment operator lhs exp ) = intercalate ", " (map show lhs) ++ operator ++ show exp
+  show (Assignment _ operator lhs exp ) = intercalate ", " (map show lhs) ++ operator ++ show exp
   show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ unwords (map show lhs)
