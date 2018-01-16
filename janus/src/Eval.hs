@@ -15,47 +15,47 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
+import System.IO.Unsafe
+
 import qualified Debug.Trace as Debug
 
 trace x = Debug.trace (show x) x
 
--- Example program for debugging purposes
-globvartype = ConT $ mkName "Int"
-globvar1 = GlobalVarDeclaration (Variable (Identifier "glob_var1") globvartype)
-globvar2 = GlobalVarDeclaration (Variable (Identifier "glob_var2") globvartype)
-proc1 = Procedure (Identifier "main") [] [Assignment "+=" [LHSIdentifier (Identifier "glob_var2")] (LitE (IntegerL 10)), Call (Identifier "substract") [LHSIdentifier (Identifier "glob_var2")]]
-proc2 = Procedure (Identifier "substract") [Variable (Identifier "arg1") globvartype] [(Assignment "-=" [LHSIdentifier (Identifier "glob_var1")] ((VarE . mkName) "glob_var2"))]
-p = Program [globvar1, globvar2, proc1, proc2]
-
--- Generates program entry points for running the program both forward and backward, as well as
--- function declarations for all procedures in the janus program. 
---O
 -- The purpose of this function is to generate a TH object that represents a program equivalent 
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
 -- another file  
 evalProgram :: Program -> Q [Dec]
-evalProgram p@(Program decls) = do  
+evalProgram p = do  
     let nameFwd = mkName "run"
     nameBwd <- newName "run_bwd"
     -- generate program entry point ('run' function)
     x  <- entry nameFwd nameBwd
     -- generate pattern for program state
-    pt <- statePattern globalVars
-    fdecs <- mapM (evalProcedure pt) procedures
-    return $ (x:fdecs)
-    where procedures = getProcedures p
-          globalVars = getVariableDecs p
-          -- generates the program entry point
+    decs <- evalProgramT p
+    return $ x:decs
+    where -- generates the program entry point
           entry fwd bwd = do
               fcall <- getMain globalVars
               binds <- vdecs
               stTup <- statePattern globalVars
               let body = DoE (binds:[NoBindS fcall])
               return (FunD fwd [Clause [] (NormalB body) []])
+          globalVars = getVariableDecs p
           -- Let bindigs for variable declarations
           vdecs = do
               decs <- mapM genDec globalVars
               return (LetS decs)
+
+-- Evaluate a program, but do not generate and entry point. 
+-- Used for testing purposes, hence the suffix 'T'
+evalProgramT :: Program -> Q [Dec]
+evalProgramT p@(Program decls) = do
+    -- generate pattern for program state
+    pt <- statePattern globalVars
+    fdecs <- mapM (evalProcedure pt) procedures
+    return fdecs
+    where procedures = getProcedures p
+          globalVars = getVariableDecs p 
 
 -- generate a let statement from pattern and expression of the form
 -- let *pat* = *exp* to be used in do expressions
@@ -73,7 +73,7 @@ genDec (GlobalVarDeclaration (Variable ident t)) = do
 -- variables as state
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
-    name <- [e|janusmain|]
+    name <- [e|hanus_main|]
     args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _)) -> 
         return ((VarE . mkName) x)) decs
     x <- foldM (\exp el -> 
@@ -88,7 +88,9 @@ statePattern varDecs = mapM toPat varDecs
 -- Evaluate a procedure to it's corresponding TH representation
 evalProcedure :: [Pat] -> Declaration -> Q Dec
 evalProcedure globalArgs (Procedure n vs b) = do
-    let name = nameId n
+    let name = case n of 
+                   (Identifier "main") -> nameId $ Identifier "hanus_main"
+                   otherwise -> nameId n
     let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
     let pattern = TupP (globalArgs)
     body <- evalProcedureBody b pattern
@@ -117,28 +119,30 @@ evalProcedureBody ss pattern = do
 
 -- Evaluate a statement from a janus program to it's corresponding TH representation
 evalStatement :: Pat -> Statement -> Q [Stmt]
-evalStatement _ (Assignment op lhss expr)           = evalAssignments op lhss expr
+evalStatement _ (Assignment op lhss expr)           = evalAssignment op lhss expr
 evalStatement p (Call (Identifier i) args)          = evalFunctionCall p i args
 evalStatement p (If exp tb eb _)                    = evalIf p exp tb eb
 evalStatement p (LoopUntil from d l until)          = undefined
 evalStatement  _ _ = error "Statement not implementend"
 
--- Evaluate assignment to a list of Identifiers (as defined in AST.hs)
-evalAssignments :: String -> [LHS] -> Exp -> Q [Stmt]
-evalAssignments op lhss expr = concatMapM (\lhs -> evalAssignment op lhs expr) lhss
-
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
 -- or more global variables in some way. 
-evalAssignment :: String -> LHS -> Exp -> Q [Stmt]
-evalAssignment op (LHSIdentifier n) lhs = do
+evalAssignment :: String -> [LHS] -> Exp -> Q [Stmt]
+evalAssignment op lhss exp = do
     let f = (VarE . mkName) op
-    let x = nameId n
     op' <- [|(\(Operator fwd _) -> fwd)|]
-    let fApp = AppE (AppE (AppE op' f) (VarE x)) lhs
+    let fApp = AppE (AppE (AppE op' f) arg) exp
     tmpN <- newName "tmp"
-    return [letStmt (VarP tmpN) fApp, letStmt (VarP x) (VarE tmpN)]
-evalAssignment _ _ _ = error "Only LHSIdentifier can be evaluated at the moment."
+    return [letStmt (VarP tmpN) fApp, letStmt pat (VarE tmpN)]
+      where arg = case lhss of
+                    [(LHSIdentifier ident)] -> VarE $ nameId ident
+                    lst@(x:xs) -> TupE $ map (\(LHSIdentifier ident) -> (VarE . nameId) ident) lst
+                    otherwise  -> error "Only LHSIdentifier can be evaluated currently"
+            pat = case lhss of
+                    [(LHSIdentifier ident)] -> VarP $ nameId ident
+                    lst@(x:xs) -> TupP $ map (\(LHSIdentifier ident) -> (VarP . nameId) ident) lst
+                    otherwise  -> error "Only LHSIdentifier can be evaluated currently"
 
 -- Evaluate a janus procedure call to it's corresponding TH representation
 evalFunctionCall :: Pat -> String -> [LHS] -> Q [Stmt]

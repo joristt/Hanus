@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes #-}
 
 module TestEval where
 
@@ -8,9 +8,19 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 import StdLib.Operator
 
---typetest = $(typeTest Int)
---test  = $(getVal 10)
---test2 = $(evalDeclaration (GlobalVarDeclaration (Variable (Identifier "a") Int)))
+import QQ
+import StdLib.Operator
 
 
-$(evalProgram p)
+[hanusT|
+    n :: Int;
+
+    procedure ifthen()
+    {
+        n += 10;
+        
+        if n==10 then
+            n += 10;
+        fi n==20;
+    }
+|]
