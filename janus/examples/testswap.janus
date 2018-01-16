@@ -1,0 +1,9 @@
+x :: Int;
+y :: Int;
+
+procedure swapint()
+{
+    x += 1;
+    y += 2;
+    swap x y;
+}

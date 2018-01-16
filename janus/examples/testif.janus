@@ -1,0 +1,19 @@
+n :: Int;
+
+procedure ifthen()
+{
+    n += 10;
+    if n==10 then
+        n += 10;
+    fi n==20;
+}
+
+procedure ifthenelse()
+{
+    n += 10;
+    if n==10 then
+        n += 10;
+    else 
+        n += 1;
+    fi n==20;
+}

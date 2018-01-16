@@ -14,15 +14,18 @@ import StdLib.Operator
 
 [hanusT|
     x :: Int;
+    y :: Int;
+    stack :: [Int];
 
-    procedure foo()
+    procedure stacktest()
     {
-        call bar x;
-    }
-
-    procedure bar()
-    {
-        y += 1;
         x += 1;
+        push stack x;
+        push stack y;
+        x += 100;
+        push stack x;
+        pop stack y;
     }
 |]
+
+

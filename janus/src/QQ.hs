@@ -41,6 +41,9 @@ hanusT = QuasiQuoter {
         return r
     }
 
+hanusTF :: QuasiQuoter
+hanusTF = quoteFile hanusT
+
 -- | Parse program by passing location info and doing semantic checking.
 runQQParser :: String -> Q Program
 runQQParser prog = do

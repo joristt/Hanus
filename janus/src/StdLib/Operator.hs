@@ -22,10 +22,11 @@ swap :: Operator (a, a) ()
 swap = symmetric (\(x, y) () -> (y, x))
 
 push, pop :: (DefaultValue a, Eq a) => Operator ([a], a) ()
-push = inverseOf pop (\(stack, val) _ -> (val : stack, defaultValue))
-pop  = inverseOf push f
-  where
-    f (s:stack, value) _
-      | value == defaultValue = (stack, s)
-      | otherwise = error "pop: Second argument is not the default value"
-    f ([], _) _ = error "pop: Stack is empty"
+push = Operator (\(stack, val) _ -> (val : stack, defaultValue)) stack_push 
+pop  = inverseOf push stack_push
+
+stack_push :: (Eq a, Eq b, DefaultValue a, DefaultValue b) => ([b], a) -> p -> ([b], b)
+stack_push (s:stack, value) _
+  | value == defaultValue = (stack, s)
+  | otherwise = error "pop: Second argument is not the default value"
+stack_push ([], _) _ = error "pop: Stack is empty"
