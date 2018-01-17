@@ -18,9 +18,11 @@ import Data.Maybe
 
 import System.IO.Unsafe
 
-import qualified Debug.Trace as Debug
+import Debug.Trace
 
-trace x = Debug.trace (show x) x
+--import qualified Debug.Trace as Debug
+
+--trace x = trace (show x) x
 
 type Env = (Globals, Scope)
 type Globals = Pat
@@ -63,11 +65,6 @@ evalProgramT p@(Program decls) = do
     return $ (map fst fdecs) ++ (concatMap snd fdecs)
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
-
--- generate a let statement from pattern and expression of the form
--- let *pat* = *exp* to be used in do expressions
-letStmt :: Pat -> Exp -> Stmt
-letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
@@ -130,10 +127,28 @@ evalStatement env (Assignment direction op lhss expr) = evalAssignment env direc
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
+evalStatement env (Debug lhss)                        = evalDebug env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = do
-  varPat <- varToPat var
-  evalLocalVarDec env varPat i stmts e
+    varPat <- varToPat var
+    evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
+
+evalDebug :: Env -> [LHS] -> Q EvalState
+evalDebug env lhss = do
+    let varNames = map lhsToString lhss
+    let tup = TupE $ map (\s -> VarE (mkName s)) varNames
+    debugStmts <- coolDebug tup (fst env)
+    return (debugStmts, [], env)
+        where lhsToString (LHSIdentifier (Identifier name)) = name
+
+coolDebug :: Exp -> Globals -> Q [Stmt]
+coolDebug lhss globs = do
+    tmpN <- newName "tmp"
+    let show'  = AppE (VarE (mkName "show")) lhss
+    let trace' = AppE (AppE (VarE (mkName "trace")) show') (tupP2tupE globs)
+    let let1 = letStmt (VarP tmpN) trace'
+    let let2 = letStmt globs (VarE tmpN)
+    return [let1, let2]
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
@@ -293,6 +308,11 @@ evalLocalVarDec env var init body exit = do
     return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], [], env)
 
 -- *** HELPERS *** ---
+
+-- generate a let statement from pattern and expression of the form
+-- let *pat* = *exp* to be used in do expressions
+letStmt :: Pat -> Exp -> Stmt
+letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 
 nameId :: Identifier -> Name
 nameId (Identifier n) = mkName n

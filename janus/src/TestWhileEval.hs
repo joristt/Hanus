@@ -14,12 +14,17 @@ import StdLib.Operator
 import qualified Data.List as List
 import qualified Data.Char as Char
 
+import Debug.Trace
+
 [hanusT|
     n :: Int;
+    m :: Int;
 
-    procedure n(x :: Int)
+    procedure n(x :: Bool)
     {
-        n += x;
+        #debug x;
+        x += 1;
+        #debug x;
     }
 |]
 
