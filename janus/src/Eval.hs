@@ -6,8 +6,6 @@ import AST
 import StdLib.Operator
 import StdLib.DefaultValue
 
-import System.Exit
-
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 
@@ -22,6 +20,10 @@ import System.IO.Unsafe
 import qualified Debug.Trace as Debug
 
 trace x = Debug.trace (show x) x
+
+type Env = (Globals, Scope)
+type Globals = Pat
+type Scope = Pat
 
 -- The purpose of this function is to generate a TH object that represents a program equivalent 
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
@@ -95,7 +97,7 @@ evalProcedure globalArgs (Procedure n vs b) = do
                    otherwise -> nameId n
     let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
     let pattern = TupP (globalArgs)
-    body <- evalProcedureBody b pattern
+    body <- evalProcedureBody b (pattern, TupP (globalArgs ++ inputArgs))
     return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
 
 -- Evaluate a procedure to it's corresponding TH representation
@@ -103,42 +105,45 @@ evalProcedure2 :: [Pat] -> Name -> [Variable] -> [Stmt] -> Q Dec
 evalProcedure2 globalArgs name vs stmts = do
     let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
     let pattern = TupP (globalArgs)
-    body <- evalProcedureBody2 stmts pattern
+    body <- evalProcedureBody2 stmts (pattern, TupP (globalArgs ++ inputArgs))
     return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody2 :: [Stmt] -> Pat -> Q Body
-evalProcedureBody2 stmts pattern = do
+evalProcedureBody2 :: [Stmt] -> Env -> Q Body
+evalProcedureBody2 stmts environment = do
     return $ NormalB $ DoE $ stmts ++ [returnTup]
-        where returnTup = NoBindS $ tupP2tupE pattern
+        where returnTup = NoBindS $ tupP2tupE (fst environment)
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody :: [Statement] -> Pat -> Q Body
-evalProcedureBody ss pattern = do
-    x <- concatMapM (evalStatement pattern) ss
-    return $ NormalB $ DoE $ x ++ [returnTup]
-        where returnTup = NoBindS $ tupP2tupE pattern
+evalProcedureBody :: [Statement] -> Env -> Q Body
+evalProcedureBody ss environment = do
+    x <- foldM accResult (initR environment) ss
+    return $ NormalB $ DoE $ (frst x) ++ [returnTup]
+        where returnTup = NoBindS $ tupP2tupE (fst environment)
 
 -- Evaluate a statement from a janus program to it's corresponding TH representation
-evalStatement :: Pat -> Statement -> Q [Stmt]
-evalStatement _ (Assignment direction op lhss expr) = evalAssignment direction op lhss expr
-evalStatement p (Call (Identifier i) args)          = evalFunctionCall p i args
-evalStatement p (If exp tb eb _)                    = evalIf p exp tb eb
-evalStatement p (LoopUntil from d l until)          = evalWhile p from until d l
+evalStatement :: Env -> Statement -> Q ([Stmt], [Dec], Scope)
+evalStatement env (Assignment direction op lhss expr) = evalAssignment env direction op lhss expr
+evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
+evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
+evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
+evalStatement env (LocalVarDeclaration var i stmts e) = do
+  varPat <- varToPat var
+  evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
 -- or more global variables in some way. 
-evalAssignment :: Bool -> String -> [LHS] -> Exp -> Q [Stmt]
-evalAssignment direction op lhss exp = do
+evalAssignment :: Env -> Bool -> String -> [LHS] -> Exp -> Q ([Stmt], [Dec], Scope)
+evalAssignment env direction op lhss exp = do
     let f = (VarE . mkName) op
     op' <- case direction of 
                False -> [|(\(Operator fwd _) -> fwd)|]
                True  -> [|(\(Operator _ bwd) -> bwd)|]
     let fApp = AppE (AppE (AppE op' f) arg) exp
     tmpN <- newName "tmp"
-    return [letStmt (VarP tmpN) fApp, letStmt pat (VarE tmpN)]
+    return ([letStmt (VarP tmpN) fApp, letStmt pat (VarE tmpN)], [], fst env)
       where arg = case lhss of
                     [(LHSIdentifier ident)] -> VarE $ nameId ident
                     lst@(x:xs) -> TupE $ map (\(LHSIdentifier ident) -> (VarE . nameId) ident) lst
@@ -149,8 +154,8 @@ evalAssignment direction op lhss exp = do
                     otherwise  -> error "Only LHSIdentifier can be evaluated currently"
 
 -- Evaluate a janus procedure call to it's corresponding TH representation
-evalFunctionCall :: Pat -> String -> [LHS] -> Q [Stmt]
-evalFunctionCall pattern name args = do
+evalFunctionCall :: Env -> String -> [LHS] -> Q ([Stmt], [Dec], Scope)
+evalFunctionCall env name args = do
     tmpN <- newName "tmp"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
@@ -158,23 +163,23 @@ evalFunctionCall pattern name args = do
          ((VarE . mkName) name) pattern'
     x <- argsE
     f' <- foldM (\x a -> return $ AppE x a) f x
-    return [letStmt (VarP tmpN) f', letStmt pattern (VarE tmpN)]
-    where pattern' = (unwrapTupleP pattern)
+    return ([letStmt (VarP tmpN) f', letStmt (fst env) (VarE tmpN)], [], snd env)
+    where pattern' = (unwrapTupleP (fst env))
           argsE = do
             x <- mapM (\(LHSIdentifier (Identifier n)) -> argE (mkName n)) args
             return x
             where argE   n = do
                     x <- argSet n
                     return $ TupE [argGet n, x]
-                  argGet n = LamE [pattern] (VarE n)
+                  argGet n = LamE [fst env] (VarE n)
                   argSet n = do
                       vName <- newName "v"
-                      return $ LamE [VarP vName, pattern]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) pattern)
+                      return $ LamE [VarP vName, fst env]
+                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) (fst env))
                                     
 
-evalFunctionCallWithName :: Pat -> Name -> [LHS] -> Q [Stmt]
-evalFunctionCallWithName pattern name args = do
+evalFunctionCallWithName :: Env -> Name -> [LHS] -> Q ([Stmt], [Dec], Scope)
+evalFunctionCallWithName env name args = do
     tmpN <- newName "tmp"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
@@ -182,43 +187,43 @@ evalFunctionCallWithName pattern name args = do
          (VarE name) pattern'
     x <- argsE
     f' <- foldM (\x a -> return $ AppE x a) f x
-    return [letStmt (VarP tmpN) f', letStmt pattern (VarE tmpN)]
-    where pattern' = (unwrapTupleP pattern)
+    return ([letStmt (VarP tmpN) f', letStmt (fst env) (VarE tmpN)], [], snd env)
+    where pattern' = (unwrapTupleP (fst env))
           argsE = do
             x <- mapM (\(LHSIdentifier (Identifier n)) -> argE (mkName n)) args
             return x
             where argE   n = do
                     x <- argSet n
                     return $ TupE [argGet n, x]
-                  argGet n = LamE [pattern] (VarE n)
+                  argGet n = LamE [fst env] (VarE n)
                   argSet n = do
                       vName <- newName "v"
-                      return $ LamE [VarP vName, pattern]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) pattern)
+                      return $ LamE [VarP vName, fst env]
+                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) (fst env))
 
 -- Evaluate a janus 'if' statement to it's corresponding TH representation
-evalIf :: Pat -> Exp -> [Statement] -> [Statement] -> Q [Stmt]
-evalIf pattern g tb eb = do
+evalIf :: Env -> Exp -> [Statement] -> [Statement] -> Q ([Stmt], [Dec], Scope)
+evalIf env g tb eb = do
     b1   <- evalBranch tb
     b2   <- evalBranch eb
     tmpN <- newName "tmp"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
-    return $ [ifStmt, letStmt pattern (VarE tmpN)]
+    return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], snd env)
     where evalBranch branch = do 
-            stmts <- concatMapM (evalStatement pattern) branch
-            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
+            stmts <- foldM accResult (initR env) branch
+            return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
 
-evalIf2 :: Pat -> Exp -> [Stmt] -> [Stmt] -> Q [Stmt]
-evalIf2 pattern g tb eb = do
+evalIf2 :: Env -> Exp -> [Stmt] -> [Stmt] -> Q ([Stmt], [Dec], Scope)
+evalIf2 env g tb eb = do
     b1   <- evalBranch tb
     b2   <- evalBranch eb
     tmpN <- newName "tmp"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
-    return $ [ifStmt, letStmt pattern (VarE tmpN)]
+    return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], snd env)
     where evalBranch stmts = do 
-            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
+            return $ DoE (stmts ++ [(NoBindS (tupP2tupE (snd env)))])
 
 evalIfErr :: Pat -> Exp -> [Stmt] -> [Stmt] -> Q [Stmt]
 evalIfErr pattern g tb eb = do
@@ -243,24 +248,26 @@ evalIfErr pattern g tb eb = do
                            |                                     v
                            ----------------------------------- False
 -}
-evalWhile :: Pat -> Exp -> Exp -> [Statement] -> [Statement] -> Q [Stmt]
-evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements = do
-    let whileProcName = mkName "while"
+evalWhile :: Env -> Exp -> Exp -> [Statement] -> [Statement] -> Q ([Stmt], [Dec], Scope)
+evalWhile pTup@(TupP patList, scope) fromGuard untilGuard doStatements loopStatements = do
+    whileProcName <- newName "while"
 
     whileProcCall <- evalFunctionCallWithName pTup whileProcName [] -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
     err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
-    let total = AppE err (tupP2tupE pTup)
-    whileIf       <- evalIfErr pTup fromGuard whileProcCall [NoBindS total]
+    -- The err will be thrown in a do block that should return a value, so we actually
+    -- have to return a bogus value after we throw the error in order to please Haskell.
+    let returnErr = AppE err (tupP2tupE pTup)
+    whileIf       <- evalIfErr pTup fromGuard (frst whileProcCall) [NoBindS total]
 
     err                   <- runQ [|error "From-guard in while loop was true after at least one iteration."|]
-    whileProcLoopIf       <- evalIf2 pTup fromGuard [NoBindS err] whileProcCall
+    whileProcLoopIf       <- evalIf2 pTup fromGuard [NoBindS err] (frst whileProcCall)
     loopStmts             <- evalStmts loopStatements
-    let whileProcLoopBlock = loopStmts ++ whileProcLoopIf
+    let whileProcLoopBlock = loopStmts ++ (frst whileProcLoopIf)
 
     whileProcDoIf       <- evalIf2 pTup untilGuard [] whileProcLoopBlock
     doStmts             <- evalStmts doStatements
-    let whileProcDoBlock = doStmts ++ whileProcDoIf
+    let whileProcDoBlock = doStmts ++ (frst whileProcDoIf)
 
     let whileProcBlock = whileProcDoBlock ++ whileProcLoopBlock
     whileProcDec      <- evalProcedure2 patList whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
@@ -270,8 +277,16 @@ evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements =
     --return (whileIf, whileProcDec)
 
     where evalStmts stmts = do
-              stmts <- concatMapM (evalStatement pTup) stmts
-              return $ stmts ++ [(NoBindS (tupP2tupE pTup))]
+              stmts <- foldM accResult (initR pTup) stmts
+              return $ (frst stmts) ++ [(NoBindS (tupP2tupE scope))]
+
+evalLocalVarDec :: Env -> Pat -> Exp -> [Statement] -> Exp -> Q ([Stmt], [Dec], Scope)
+evalLocalVarDec env var init body exit = do
+    tmpN <- newName "tmp"
+    stmts <- foldM accResult (initR env) body
+    let body' = DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
+    let asg = LetE [ValD var (NormalB init) []] body'
+    return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], [], snd env)
 
 -- *** HELPERS *** ---
 
@@ -301,6 +316,21 @@ unwrapTupleP (TupP xs) = xs
 concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
 concatMapM op = foldr f (return [])
     where f x xs = do x <- op x; if null x then xs else do xs <- xs; return $ x++xs
+
+accResult :: ([Stmt], [Dec], Scope) -> Statement ->  Q ([Stmt], [Dec], Scope)
+accResult = undefined
+
+initR :: Env -> ([Stmt], [Dec], Scope)
+initR env = ([], [], snd env) 
+
+frst :: (a, b, c) -> a
+frst (x, _, _) = x
+
+scnd :: (a, b, c) -> b
+scnd (_, y, _) = y
+
+thrd :: (a, b, c) -> c
+thrd (_, _, z) = z
 
 -- Enumerate all procedure declarations in a janus program
 getProcedures :: Program -> [Declaration]

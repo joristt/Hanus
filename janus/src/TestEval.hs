@@ -11,20 +11,18 @@ import StdLib.Operator
 import QQ
 import StdLib.Operator
 
+import qualified Data.List as List
+import qualified Data.Char as Char
+
 [hanusT|
-    n :: Integer;
+    x :: Int;
 
-    procedure while()
+    procedure foo()
     {
-    }
+        call bar;
+    } 
 
-    procedure n()
-    {
-        n += 1;
-        from n == 1
-            do n += 1;
-            loop n += 1;
-        until n == 1;
-        n += 1;
-    }
+procedure bar() {x += 10; local n :: Int = 42;n += 10;x += n;delocal 52;}
 |]
+
+
