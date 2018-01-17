@@ -32,6 +32,7 @@ import qualified Data.Char as Char
     }
 
 procedure runfib(){local n :: Int = 100000;call fib n;delocal 4;}
+
 |]
 
 [hanusT|

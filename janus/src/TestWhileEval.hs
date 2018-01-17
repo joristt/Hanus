@@ -14,13 +14,24 @@ import StdLib.Operator
 import qualified Data.List as List
 import qualified Data.Char as Char
 
+import Debug.Trace
+
 [hanusT|
     n :: Int;
+    a :: Int;
+    b :: Int;
 
-    procedure n(x :: Int)
+    procedure fib()
     {
-        n += x;
+        if n == 0 then
+            a += 1;
+            b += 1;
+        else
+            n -= 1;
+            #debug n;
+            call fib;
+            a += b;
+            swap b a;
+        fi 1 == 1;
     }
 |]
-
-

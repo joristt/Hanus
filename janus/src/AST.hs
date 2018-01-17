@@ -41,6 +41,9 @@ data Statement
   --   block
   -- delocal expr;
   | LocalVarDeclaration Variable Exp Block Exp
+  -- debug expr;
+  -- This prints the expr to stdout.
+  | Debug [LHS]
 
 {-
 Examples:
