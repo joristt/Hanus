@@ -17,14 +17,9 @@ import qualified Data.Char as Char
 [hanusT|
     n :: Int;
 
-    procedure n()
+    procedure n(x :: Int)
     {
-        n += 1;
-        from n == 1
-            do n += 1;
-            loop n += 1;
-        until n == 4;
-        n += 1;
+        n += x;
     }
 |]
 

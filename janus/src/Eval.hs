@@ -74,7 +74,7 @@ genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t)) = do 
     let name = nameId ident
     defVal <- runQ [|defaultValue|]
-    return (ValD (SigP (VarP name) t) (NormalB (defVal)) []) 
+    return (ValD (VarP name) (NormalB (defVal)) []) 
 
 -- Generate an expression that calls the main function with all global 
 -- variables as state
@@ -178,7 +178,7 @@ evalFunctionCall env name args = do
                   argSet n = do
                       vName <- newName "v"
                       return $ LamE [VarP vName, fst env]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) (fst env))
+                          ((TupE . map VarE) $ replace n vName $ (map (\(VarP n) -> n) . unwrapTupleP) (fst env))
                                     
 
 evalFunctionCallWithName :: Env -> Name -> [LHS] -> Q EvalState
@@ -202,7 +202,7 @@ evalFunctionCallWithName env name args = do
                   argSet n = do
                       vName <- newName "v"
                       return $ LamE [VarP vName, fst env]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(SigP (VarP n) _) -> n) . unwrapTupleP) (fst env))
+                          ((TupE . map VarE) $ replace n vName $ (map (\(VarP n) -> n) . unwrapTupleP) (fst env))
 
 -- Evaluate a janus 'if' statement to it's corresponding TH representation
 evalIf :: Env -> Exp -> [Statement] -> [Statement] -> Q EvalState
@@ -302,16 +302,16 @@ nameId (Identifier n) = mkName n
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
     let name = nameId n
-    return $ SigP (VarP name) t
+    return $ VarP name
 
 -- Create a TH expression referencing a variable from a TH pattern referencing
 -- a variable
 expFromVarP :: Pat -> Q Exp
-expFromVarP (SigP (VarP name) _) = return (VarE name) 
+expFromVarP (VarP name) = return (VarE name) 
 
 -- Convert a TH tuple pattern to a TH tuple expression
 tupP2tupE :: Pat -> Exp
-tupP2tupE (TupP pats) = TupE $ map (\(SigP (VarP name) _) -> VarE name) pats
+tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
 
 unwrapTupleP :: Pat -> [Pat]
 unwrapTupleP (TupP xs) = xs
