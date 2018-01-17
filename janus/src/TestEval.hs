@@ -26,5 +26,3 @@ import qualified Data.Char as Char
 
     }
 |]
-
-

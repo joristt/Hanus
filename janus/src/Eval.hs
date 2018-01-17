@@ -281,8 +281,6 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
 
     return (frst whileIf, [whileProcDec], env)
 
-    --return (whileIf, whileProcDec)
-
     where evalStmts stmts = do
               stmts <- foldM accResult (initR env) stmts
               return $ (frst stmts)
