@@ -276,8 +276,6 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
     let whileProcBlock = doStmts ++ (frst whileProcDoIf)
 
     whileProcDec      <- evalProcedure2 globals whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
-    
-    runIO $ putStrLn $ pprint whileProcDec
 
     return (frst whileIf, [whileProcDec], env)
 
