@@ -91,6 +91,7 @@ instance Show Statement where
   show (LocalVarDeclaration v init block exp) = "local " ++ show v ++ " = " ++ show init ++ ";\n"
     ++ indent (unlines $ map show block)
     ++ "delocal " ++ show exp ++ ";"
+  show (Log lhs) = intercalate ", " $ map show lhs
 
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
