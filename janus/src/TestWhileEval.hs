@@ -17,17 +17,13 @@ import qualified Data.Char as Char
 [hanusT|
     n :: Int;
 
-    procedure foo()
-    {
-    }
-
     procedure n()
     {
         n += 1;
         from n == 1
             do n += 1;
             loop n += 1;
-        until n == 1;
+        until n == 2;
         n += 1;
     }
 |]
