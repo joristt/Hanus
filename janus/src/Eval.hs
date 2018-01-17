@@ -163,22 +163,9 @@ evalFunctionCall env name args = do
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
-         ((VarE . mkName) name) pattern'
-    x <- argsE
-    f' <- foldM (\x a -> return $ AppE x a) f x
-    return ([letStmt (VarP tmpN) f', letStmt (fst env) (VarE tmpN)], [], env)
+         ((VarE . mkName) name) (pattern' ++ (map (\(LHSIdentifier (Identifier n)) -> VarP (mkName n)) args))
+    return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
     where pattern' = (unwrapTupleP (fst env))
-          argsE = do
-            x <- mapM (\(LHSIdentifier (Identifier n)) -> argE (mkName n)) args
-            return x
-            where argE   n = do
-                    x <- argSet n
-                    return $ TupE [argGet n, x]
-                  argGet n = LamE [fst env] (VarE n)
-                  argSet n = do
-                      vName <- newName "v"
-                      return $ LamE [VarP vName, fst env]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(VarP n) -> n) . unwrapTupleP) (fst env))
                                     
 
 evalFunctionCallWithName :: Env -> Name -> [LHS] -> Q EvalState
