@@ -127,38 +127,36 @@ evalStatement env (Assignment direction op lhss expr) = evalAssignment env direc
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
-evalStatement env (Debug lhss)                        = evalDebug env lhss
+evalStatement env (Log   lhss)                        = evalLog env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = do
     varPat <- varToPat var
     evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
--- Takes a list of LHS's that should be debugged (e.g. ["x"]) and
--- returns [Assignment True "+=" ["x"] (trace ("m: " ++ (show m)) 0)]
-evalLogUpdate :: [LHS] -> Q [Stmt]
-evalLogUpdate [] = return []
+-- If input is ["x"] then output is [", ", "x", " : ", "<value_of_x>"]
+evalLogUpdate :: [LHS] -> [Exp]
+evalLogUpdate [] = []
 evalLogUpdate (x:xs) = do
-    let name     = lhsToString x
-    let nameExp  = LitE $ StringL name
-    let zeroExp  = LitE $ IntegerL 0
-    let sepExp   = LitE $ StringL ": "
-    let debugExp = VarE (mkName debugLogName)
-    let debugPat = VarP (mkName debugLogName)
-    let valExp   = ListE [AppE (VarE (mkName "show")) (VarE (mkName name))]
-    let msgExp   = joinExp (joinExp nameExp sepExp) valExp
-    let prependExp = AppE (AppE (VarE (mkName "++")) debugExp) valExp
-    tmpN <- newName "tmp"
-    let let1 = letStmt (VarP tmpN) prependExp
-    let let2 = letStmt debugPat (VarE tmpN)
-    res <- evalLogUpdate xs
-    return $ [let1, let2] ++ res
+    let name       = lhsToString x
+    let nameExp    = LitE $ StringL name
+    let sepExp     = LitE $ StringL " : "
+    let commaExp   = LitE $ StringL ", "
+    let valExp     = AppE (toE "show") (toE name)
+    [commaExp, nameExp, sepExp, valExp] ++ evalLogUpdate xs
+    --msgExp ++ evalLogUpdate xs
         where lhsToString (LHSIdentifier (Identifier name)) = name
-              joinExp a b = AppE (AppE (VarE (mkName "++")) a) b
+              --a `append` b = AppE (AppE (VarE (mkName "++")) b) a
 
-evalDebug :: Env -> [LHS] -> Q EvalState
-evalDebug env xs = do
-    logUpdateStmts <- evalLogUpdate xs
-    return (logUpdateStmts, [], env)
+evalLog :: Env -> [LHS] -> Q EvalState
+evalLog env xs = do
+    -- We take the tail because the first Exp is a separator.
+    let logUpdateStmts = ListE $ tail $ evalLogUpdate xs
+    tmpN <- newName "tmp"
+    let concatedList = ListE [(AppE (toE "concat") logUpdateStmts)]
+    let newLog = AppE (AppE (toE "++") (toE logName)) concatedList
+    let let1 = letStmt (VarP tmpN) newLog
+    let let2 = letStmt (toP logName) (VarE tmpN)
+    return ([let1, let2], [], env)
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
@@ -358,19 +356,24 @@ thrd (_, _, z) = z
 removeVar :: Pat -> Env -> Env
 removeVar var env = (fst env, TupP $ List.delete var $ (unwrapTupleP . snd) env)
 
--- "_debug" is a special variable that is never used by the user but
+toE :: String -> Exp
+toE s = VarE (mkName s)
+
+toP :: String -> Pat
+toP s = VarP (mkName s)
+
+-- "_log" is a special variable that is never used by the user but
 -- is used by the generated Haskell code to store log messages. Since
--- Haskell evaluates in a bottom-up fashion, sequential debug statements
+-- Haskell evaluates in a bottom-up fashion, sequential log statements
 -- will be printed in reversed order. Therefore, all log messages will
--- first be stored in _debug, and then _debug will be printed in reverse
--- order after the program has terminated.
-debugLogDecl :: Declaration
-debugLogDecl = GlobalVarDeclaration (Variable (Identifier debugLogName) debugLogType)
+-- first be collected in _log, and then _log will be printed when the
+-- program has terminated.
+logDecl :: Declaration
+logDecl = GlobalVarDeclaration (Variable (Identifier logName) logType)
+    where logType = ConT (mkName "[String]")
 
-debugLogName :: String
-debugLogName = "_debug"
-
-debugLogType = ConT (mkName "[String]")
+logName :: String
+logName = "_log"
 
 -- Enumerate all procedure declarations in a janus program
 getProcedures :: Program -> [Declaration]
@@ -387,7 +390,7 @@ replace a b (x:xs) | a == x    = b:xs
 
 -- Enumerate all global variable declarations in a janus program
 getVariableDecs :: Program -> [Declaration]
-getVariableDecs (Program decs) = debugLogDecl : (filter filterVars decs)
+getVariableDecs (Program decs) = logDecl : (filter filterVars decs)
     where filterVars dec  = case dec of 
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False

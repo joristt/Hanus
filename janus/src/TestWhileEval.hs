@@ -18,20 +18,23 @@ import Debug.Trace
 
 [hanusT|
     n :: Int;
+    i :: Int;
     a :: Int;
     b :: Int;
 
     procedure fib()
     {
-        if n == 0 then
+        if n == 1 then
             a += 1;
             b += 1;
         else
             n -= 1;
             call fib;
-            #debug n a b;
             a += b;
             swap b a;
         fi 1 == 1;
+
+        #log i a b;
+        i += 1;
     }
 |]

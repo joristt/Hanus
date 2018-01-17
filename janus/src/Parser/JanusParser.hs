@@ -116,7 +116,7 @@ pAssignment :: Parser Statement
 pAssignment = (\x y z -> Assignment False y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
 pDebug :: Parser Statement
-pDebug = Debug <$ pToken "#debug" <* pSpaces <*> pSomeLHS <* pSpaces <* pToken ";" <* pSpaces
+pDebug = Log <$ pToken "#log" <* pSpaces <*> pSomeLHS <* pSpaces <* pToken ";" <* pSpaces
 
 pOperator :: Parser String
 pOperator =

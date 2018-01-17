@@ -41,9 +41,9 @@ data Statement
   --   block
   -- delocal expr;
   | LocalVarDeclaration Variable Exp Block Exp
-  -- debug expr;
-  -- This prints the expr to stdout.
-  | Debug [LHS]
+  -- #log expr1 expr2 ...;
+  -- This prints the exprs in format "expr1name : expr1value, expr2name : expr2value" etc...
+  | Log [LHS]
 
 {-
 Examples:
