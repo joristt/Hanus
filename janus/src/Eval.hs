@@ -214,27 +214,27 @@ evalIf env g tb eb = do
             stmts <- foldM accResult (initR env) branch
             return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
 
-evalIf2 :: Env -> Exp -> [Stmt] -> [Stmt] -> Q ([Stmt], [Dec], Scope)
-evalIf2 env g tb eb = do
-    b1   <- evalBranch tb
-    b2   <- evalBranch eb
-    tmpN <- newName "tmp"
+--evalIf2 :: Env -> Exp -> [Stmt] -> [Stmt] -> Q ([Stmt], [Dec], Scope)
+--evalIf2 env g tb eb = do
+--    b1   <- evalBranch tb
+--    b2   <- evalBranch eb
+--    tmpN <- newName "tmp"
+--    let ifExp  = CondE g b1 b2
+--    let ifStmt = letStmt (VarP tmpN) ifExp
+--    return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], snd env)
+--    where evalBranch stmts = do 
+--            return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
+
+evalIfErr :: Env -> Exp -> ([Stmt], [Dec], Scope) -> ([Stmt], [Dec], Scope) -> Q ([Stmt], [Dec], Scope)
+evalIfErr env g tb eb = do
+    b1     <- evalBranch tb
+    b2     <- evalBranch eb
+    tmpN   <- newName "tmp"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
     return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], snd env)
     where evalBranch stmts = do 
-            return $ DoE (stmts ++ [(NoBindS (tupP2tupE (snd env)))])
-
-evalIfErr :: Pat -> Exp -> [Stmt] -> [Stmt] -> Q [Stmt]
-evalIfErr pattern g tb eb = do
-    b1   <- evalBranch tb
-    let b2 = DoE eb
-    tmpN <- newName "tmp"
-    let ifExp  = CondE g b1 b2
-    let ifStmt = letStmt (VarP tmpN) ifExp
-    return $ [ifStmt, letStmt pattern (VarE tmpN)]
-    where evalBranch stmts = do 
-            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
+            return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
 
 {- Flow of a loop is: 
       fromGuard True -> doStmts -> untilGuard True -> loop successfully terminates
@@ -249,36 +249,36 @@ evalIfErr pattern g tb eb = do
                            ----------------------------------- False
 -}
 evalWhile :: Env -> Exp -> Exp -> [Statement] -> [Statement] -> Q ([Stmt], [Dec], Scope)
-evalWhile pTup@(TupP patList, scope) fromGuard untilGuard doStatements loopStatements = do
+evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatements = do
     whileProcName <- newName "while"
 
-    whileProcCall <- evalFunctionCallWithName pTup whileProcName [] -- the empty list here shouldn't be empty.
-    -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
-    err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
-    -- The err will be thrown in a do block that should return a value, so we actually
-    -- have to return a bogus value after we throw the error in order to please Haskell.
-    let returnErr = AppE err (tupP2tupE pTup)
-    whileIf       <- evalIfErr pTup fromGuard (frst whileProcCall) [NoBindS total]
+    --whileProcCall <- evalFunctionCallWithName env whileProcName [] -- the empty list here shouldn't be empty.
+    ---- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
+    --err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
+    ---- The err will be thrown in a do block that should return a value, so we actually
+    ---- have to return a bogus value after we throw the error in order to please Haskell.
+    --let returnErr = NoBindS $ AppE err (tupP2tupE (snd env))
+    --whileIf       <- evalIfErr env fromGuard (frst whileProcCall) [returnErr]
 
-    err                   <- runQ [|error "From-guard in while loop was true after at least one iteration."|]
-    whileProcLoopIf       <- evalIf2 pTup fromGuard [NoBindS err] (frst whileProcCall)
-    loopStmts             <- evalStmts loopStatements
-    let whileProcLoopBlock = loopStmts ++ (frst whileProcLoopIf)
+    --err                   <- runQ [|error "From-guard in while loop was true after at least one iteration."|]
+    --whileProcLoopIf       <- evalIf2 env fromGuard [NoBindS err] (frst whileProcCall)
+    --loopStmts             <- evalStmts loopStatements
+    --let whileProcLoopBlock = loopStmts ++ (frst whileProcLoopIf)
 
-    whileProcDoIf       <- evalIf2 pTup untilGuard [] whileProcLoopBlock
-    doStmts             <- evalStmts doStatements
-    let whileProcDoBlock = doStmts ++ (frst whileProcDoIf)
+    --whileProcDoIf       <- evalIf2 env untilGuard [] whileProcLoopBlock
+    --doStmts             <- evalStmts doStatements
+    --let whileProcDoBlock = doStmts ++ (frst whileProcDoIf)
 
-    let whileProcBlock = whileProcDoBlock ++ whileProcLoopBlock
-    whileProcDec      <- evalProcedure2 patList whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
+    --let whileProcBlock = whileProcDoBlock ++ whileProcLoopBlock
+    --whileProcDec      <- evalProcedure2 globals whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
     
-    return whileIf
+    return ([], [], snd env)
 
     --return (whileIf, whileProcDec)
 
-    where evalStmts stmts = do
-              stmts <- foldM accResult (initR pTup) stmts
-              return $ (frst stmts) ++ [(NoBindS (tupP2tupE scope))]
+    --where evalStmts stmts = do
+              --stmts <- foldM accResult (initR pTup) stmts
+              --return $ (frst stmts) ++ [(NoBindS (tupP2tupE scope))]
 
 evalLocalVarDec :: Env -> Pat -> Exp -> [Statement] -> Exp -> Q ([Stmt], [Dec], Scope)
 evalLocalVarDec env var init body exit = do
