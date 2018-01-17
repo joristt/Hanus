@@ -146,7 +146,7 @@ pLHSIdentifier :: Parser LHS
 pLHSIdentifier = LHSIdentifier <$> pIdentifier
 
 pPrefixOperatorAssignment :: Parser Statement
-pPrefixOperatorAssignment = Assignment <$> pName <* pSomeSpace <*> pSomeLHS `micro` 1 <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
+pPrefixOperatorAssignment = Assignment False <$> pName <* pSomeSpace <*> pSomeLHS `micro` 1 <* pToken ";" <*> pReturn (ConE (mkName "()")) <* pSpaces
 
 pCall :: Parser Statement
 pCall = ((Call <$ pToken "call") <|> (Uncall <$ pToken "uncall")) <* pSomeSpace <*> pIdentifier <*> pList (pSomeSpace *> pLHS) `micro` 1 <* pToken ";" <* pSpaces
