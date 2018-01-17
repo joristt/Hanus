@@ -23,7 +23,7 @@ import qualified Data.Char as Char
         from n == 1
             do n += 1;
             loop n += 1;
-        until n == 2;
+        until n == 4;
         n += 1;
     }
 |]
