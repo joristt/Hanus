@@ -85,6 +85,9 @@ instance Show Statement where
     ++ "loop\n"
     ++ indent (unlines $ map show s2)
     ++ "until " ++ show post ++ ";"
+  show (LocalVarDeclaration v init block exp) = "local " ++ show v ++ " = " ++ show init ++ ";\n"
+    ++ indent (unlines $ map show block)
+    ++ "delocal " ++ show exp ++ ";"
 
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
