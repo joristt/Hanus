@@ -22,7 +22,7 @@ import qualified Data.Char as Char
         call bar;
     } 
 
-procedure bar() {x += 10; local n :: Int = 42; n += 10; x += n; delocal 52;}
+procedure bar() {x += 10; local n :: Int = 42;n += 10;x += n;delocal 52;}
 |]
 
 

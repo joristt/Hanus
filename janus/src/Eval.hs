@@ -27,7 +27,7 @@ type Scope = Pat
 
 -- The purpose of this function is to generate a TH object that represents a program equivalent 
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
--- another file  
+-- another file
 evalProgram :: Program -> Q [Dec]
 evalProgram p = do  
     let nameFwd = mkName "run"
@@ -126,7 +126,7 @@ evalStatement :: Env -> Statement -> Q [Stmt]
 evalStatement _   (Assignment direction op lhss expr) = evalAssignment direction op lhss expr
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall (fst env) i args
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
-evalStatement env (LoopUntil from d l until)          = undefined 
+evalStatement env (LoopUntil from d l until)          = evalWhile p from until d l 
 evalStatement env (LocalVarDeclaration var i stmts e) = do
   varPat <- varToPat var
   evalLocalVarDec env varPat i stmts e
@@ -258,7 +258,9 @@ evalWhile pTup@(TupP patList, scope) fromGuard untilGuard doStatements loopState
     let whileProcBlock = whileProcDoBlock ++ whileProcLoopBlock
     whileProcDec      <- evalProcedure2 patList whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
     
-    return (whileIf, whileProcDec)
+    return whileIf
+
+    --return (whileIf, whileProcDec)
 
     where evalStmts stmts = do
               stmts <- concatMapM (evalStatement pTup) stmts
