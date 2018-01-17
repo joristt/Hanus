@@ -11,8 +11,11 @@ import StdLib.Operator
 import QQ
 import StdLib.Operator
 
+import qualified Data.List as List
+import qualified Data.Char as Char
+
 [hanusT|
-    x :: Int;
+    n :: Int;
 
     procedure foo()
     {
