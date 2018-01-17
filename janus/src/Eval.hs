@@ -226,6 +226,17 @@ evalIf2 env g tb eb = do
     where evalBranch stmts = do 
             return $ DoE (stmts ++ [(NoBindS (tupP2tupE (snd env)))])
 
+evalIfErr :: Pat -> Exp -> [Stmt] -> [Stmt] -> Q [Stmt]
+evalIfErr pattern g tb eb = do
+    b1   <- evalBranch tb
+    let b2 = DoE eb
+    tmpN <- newName "tmp"
+    let ifExp  = CondE g b1 b2
+    let ifStmt = letStmt (VarP tmpN) ifExp
+    return $ [ifStmt, letStmt pattern (VarE tmpN)]
+    where evalBranch stmts = do 
+            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
+
 {- Flow of a loop is: 
       fromGuard True -> doStmts -> untilGuard True -> loop successfully terminates
           |                ^            |
@@ -245,7 +256,10 @@ evalWhile pTup@(TupP patList, scope) fromGuard untilGuard doStatements loopState
     whileProcCall <- evalFunctionCallWithName pTup whileProcName [] -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
     err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
-    whileIf       <- evalIf2 pTup fromGuard (frst whileProcCall) [NoBindS err]
+    -- The err will be thrown in a do block that should return a value, so we actually
+    -- have to return a bogus value after we throw the error in order to please Haskell.
+    let returnErr = AppE err (tupP2tupE pTup)
+    whileIf       <- evalIfErr pTup fromGuard (frst whileProcCall) [NoBindS total]
 
     err                   <- runQ [|error "From-guard in while loop was true after at least one iteration."|]
     whileProcLoopIf       <- evalIf2 pTup fromGuard [NoBindS err] (frst whileProcCall)
