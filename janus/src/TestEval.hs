@@ -13,19 +13,15 @@ import StdLib.Operator
 
 
 [hanusT|
-    x :: Int;
-    y :: Int;
-    stack :: [Int];
+    n :: Integer;
 
-    procedure stacktest()
+    procedure n()
     {
-        x += 1;
-        push stack x;
-        push stack y;
-        x += 100;
-        push stack x;
-        pop stack y;
+        n += 5;
+        from n = 5
+            do
+                n -= 1;
+            loop
+        until n == 1;
     }
 |]
-
-
