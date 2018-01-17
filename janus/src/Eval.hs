@@ -60,7 +60,7 @@ evalProgramT p@(Program decls) = do
     -- generate pattern for program state
     pt <- statePattern globalVars
     fdecs <- mapM (evalProcedure pt) procedures
-    return fdecs
+    return $ (map fst fdecs) ++ (concatMap snd fdecs)
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
 
@@ -93,7 +93,7 @@ statePattern varDecs = mapM toPat varDecs
     where toPat (GlobalVarDeclaration var) = varToPat var
 
 -- Evaluate a procedure to it's corresponding TH representation
-evalProcedure :: [Pat] -> Declaration -> Q Dec
+evalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
 evalProcedure globalArgs (Procedure n vs b) = do
     let name = case n of 
                    (Identifier "main") -> nameId $ Identifier "hanus_main"
@@ -101,7 +101,7 @@ evalProcedure globalArgs (Procedure n vs b) = do
     let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
     let pattern = TupP (globalArgs)
     body <- evalProcedureBody b (pattern, TupP (globalArgs ++ inputArgs))
-    return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
+    return (FunD name [Clause (globalArgs ++ inputArgs) (fst body) []], snd body)
 
 -- Evaluate a procedure to it's corresponding TH representation
 evalProcedure2 :: [Pat] -> Name -> [Variable] -> [Stmt] -> Q Dec
@@ -118,10 +118,10 @@ evalProcedureBody2 stmts environment = do
         where returnTup = NoBindS $ tupP2tupE (fst environment)
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody :: [Statement] -> Env -> Q Body
+evalProcedureBody :: [Statement] -> Env -> Q (Body, [Dec])
 evalProcedureBody ss environment = do
     x <- foldM accResult (initR environment) ss
-    return $ NormalB $ DoE $ (frst x) ++ [returnTup]
+    return (NormalB $ DoE $ (frst x) ++ [returnTup], scnd x)
         where returnTup = NoBindS $ tupP2tupE (fst environment)
 
 -- Evaluate a statement from a janus program to it's corresponding TH representation

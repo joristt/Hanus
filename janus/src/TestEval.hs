@@ -23,6 +23,5 @@ import qualified Data.Char as Char
         if n==10 then
             n += 10;
         fi n==20;
-
     }
 |]
