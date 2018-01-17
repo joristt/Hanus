@@ -16,8 +16,6 @@ import qualified Data.Char as Char
 
 import Debug.Trace
 
-import Data.List (intercalate)
-
 [hanusT|
     n :: Int;
     a :: Int;

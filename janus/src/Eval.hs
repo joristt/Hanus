@@ -20,8 +20,6 @@ import System.IO.Unsafe
 
 import Debug.Trace
 
-import Data.List (intercalate)
-
 --import qualified Debug.Trace as Debug
 
 --trace x = trace (show x) x
@@ -147,14 +145,14 @@ evalLogUpdate (x:xs) = do
     let debugExp = VarE (mkName debugLogName)
     let debugPat = VarP (mkName debugLogName)
     let valExp   = ListE [AppE (VarE (mkName "show")) (VarE (mkName name))]
-    let listExp  = ListE [nameExp, valExp]
-    let msgExp   = AppE (AppE (VarE (mkName "intercalate")) sepExp) listExp
+    let msgExp   = joinExp (joinExp nameExp sepExp) valExp
     let prependExp = AppE (AppE (VarE (mkName "++")) debugExp) valExp
     tmpN <- newName "tmp"
     let let1 = letStmt (VarP tmpN) prependExp
     let let2 = letStmt debugPat (VarE tmpN)
     return [let1, let2]
         where lhsToString (LHSIdentifier (Identifier name)) = name
+              joinExp a b = AppE (AppE (VarE (mkName "++")) a) b
 
 evalDebug :: Env -> [LHS] -> Q EvalState
 evalDebug env xs = do
