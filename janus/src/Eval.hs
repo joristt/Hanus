@@ -150,7 +150,8 @@ evalLogUpdate (x:xs) = do
     tmpN <- newName "tmp"
     let let1 = letStmt (VarP tmpN) prependExp
     let let2 = letStmt debugPat (VarE tmpN)
-    return [let1, let2]
+    res <- evalLogUpdate xs
+    return $ [let1, let2] ++ res
         where lhsToString (LHSIdentifier (Identifier name)) = name
               joinExp a b = AppE (AppE (VarE (mkName "++")) a) b
 
