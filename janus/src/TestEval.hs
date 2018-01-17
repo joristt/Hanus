@@ -15,21 +15,21 @@ import qualified Data.List as List
 import qualified Data.Char as Char
 
 [hanusT|
-    n :: Int;
+    xa :: Int;
+    xb :: Int;
 
-    procedure foo()
-    {local x :: Int = 10;
-            call bar x;
-        delocal 10;}
-
-    procedure bar(y :: Int)
+    procedure fib(n :: Int)
     {
-        n += y;
-        if n==10 then
-            y += 1;
+        if n==0 then
+            xa += 1;
+            xb += 1;
         else
             n -= 1;
-        fi n==10;
-        n += y;
+            call fib n;
+            xa += xb;
+            swap xa xb;
+        fi xa==xb;
     }
+
+procedure runfib(){local n :: Int = 100000;call fib n;delocal 4;}
 |]
