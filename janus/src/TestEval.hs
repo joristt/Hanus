@@ -17,11 +17,18 @@ import qualified Data.Char as Char
 [hanusT|
     n :: Int;
 
-    procedure ifthen()
+    procedure ifthen(y :: Int)
     {
-        n += 10;
+        n += 9;
         if n==10 then
-            n += 10;
-        fi n==20;
+            n += 1;
+            if n==10 then
+                n -= 1;
+            else 
+                n += 1;
+            fi n==12;
+        else
+            n -= 1;
+        fi n==12;
     }
 |]
