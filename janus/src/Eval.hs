@@ -6,6 +6,8 @@ import AST
 import StdLib.Operator
 import StdLib.DefaultValue
 
+import System.Exit
+
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 
@@ -218,6 +220,17 @@ evalIf2 pattern g tb eb = do
     where evalBranch stmts = do 
             return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
 
+evalIfErr :: Pat -> Exp -> [Stmt] -> [Stmt] -> Q [Stmt]
+evalIfErr pattern g tb eb = do
+    b1   <- evalBranch tb
+    let b2 = DoE eb
+    tmpN <- newName "tmp"
+    let ifExp  = CondE g b1 b2
+    let ifStmt = letStmt (VarP tmpN) ifExp
+    return $ [ifStmt, letStmt pattern (VarE tmpN)]
+    where evalBranch stmts = do 
+            return $ DoE (stmts ++ [(NoBindS (tupP2tupE pattern))])
+
 {- Flow of a loop is: 
       fromGuard True -> doStmts -> untilGuard True -> loop successfully terminates
           |                ^            |
@@ -230,9 +243,6 @@ evalIf2 pattern g tb eb = do
                            |                                     v
                            ----------------------------------- False
 -}
-
---dec <- evalProcedure [] (Procedure (Identifier "asdf123") [] [])
-
 evalWhile :: Pat -> Exp -> Exp -> [Statement] -> [Statement] -> Q [Stmt]
 evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements = do
     let whileProcName = mkName "while"
@@ -240,7 +250,8 @@ evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements =
     whileProcCall <- evalFunctionCallWithName pTup whileProcName [] -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
     err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
-    whileIf       <- evalIf2 pTup fromGuard whileProcCall [NoBindS err]
+    let total = AppE err (tupP2tupE pTup)
+    whileIf       <- evalIfErr pTup fromGuard whileProcCall [NoBindS total]
 
     err                   <- runQ [|error "From-guard in while loop was true after at least one iteration."|]
     whileProcLoopIf       <- evalIf2 pTup fromGuard [NoBindS err] whileProcCall

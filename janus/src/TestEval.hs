@@ -11,19 +11,17 @@ import StdLib.Operator
 import QQ
 import StdLib.Operator
 
-
 [hanusT|
     n :: Integer;
 
     procedure while()
     {
-
     }
 
     procedure n()
     {
-        n += 5;
-        from n == 0
+        n += 1;
+        from n == 1
             do n += 1;
             loop n += 1;
         until n == 1;
