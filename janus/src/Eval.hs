@@ -20,6 +20,8 @@ import System.IO.Unsafe
 
 import Debug.Trace
 
+import Data.List (intercalate)
+
 --import qualified Debug.Trace as Debug
 
 --trace x = trace (show x) x
@@ -133,22 +135,31 @@ evalStatement env (LocalVarDeclaration var i stmts e) = do
     evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
-evalDebug :: Env -> [LHS] -> Q EvalState
-evalDebug env lhss = do
-    let varNames = map lhsToString lhss
-    let tup = TupE $ map (\s -> VarE (mkName s)) varNames
-    debugStmts <- coolDebug tup (fst env)
-    return (debugStmts, [], env)
+-- Takes a list of LHS's that should be debugged (e.g. ["x"]) and
+-- returns [Assignment True "+=" ["x"] (trace ("m: " ++ (show m)) 0)]
+evalLogUpdate :: [LHS] -> Q [Stmt]
+evalLogUpdate [] = return []
+evalLogUpdate (x:xs) = do
+    let name     = lhsToString x
+    let nameExp  = LitE $ StringL name
+    let zeroExp  = LitE $ IntegerL 0
+    let sepExp   = LitE $ StringL ": "
+    let debugExp = VarE (mkName debugLogName)
+    let debugPat = VarP (mkName debugLogName)
+    let valExp   = ListE [AppE (VarE (mkName "show")) (VarE (mkName name))]
+    let listExp  = ListE [nameExp, valExp]
+    let msgExp   = AppE (AppE (VarE (mkName "intercalate")) sepExp) listExp
+    let prependExp = AppE (AppE (VarE (mkName "++")) debugExp) valExp
+    tmpN <- newName "tmp"
+    let let1 = letStmt (VarP tmpN) prependExp
+    let let2 = letStmt debugPat (VarE tmpN)
+    return [let1, let2]
         where lhsToString (LHSIdentifier (Identifier name)) = name
 
-coolDebug :: Exp -> Globals -> Q [Stmt]
-coolDebug lhss globs = do
-    tmpN <- newName "tmp"
-    let show'  = AppE (VarE (mkName "show")) lhss
-    let trace' = AppE (AppE (VarE (mkName "trace")) show') (tupP2tupE globs)
-    let let1 = letStmt (VarP tmpN) trace'
-    let let2 = letStmt globs (VarE tmpN)
-    return [let1, let2]
+evalDebug :: Env -> [LHS] -> Q EvalState
+evalDebug env xs = do
+    logUpdateStmts <- evalLogUpdate xs
+    return (logUpdateStmts, [], env)
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
@@ -178,22 +189,9 @@ evalFunctionCall env name args = do
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
-         ((VarE . mkName) name) pattern'
-    x <- argsE
-    f' <- foldM (\x a -> return $ AppE x a) f x
-    return ([letStmt (VarP tmpN) f', letStmt (fst env) (VarE tmpN)], [], env)
+         ((VarE . mkName) name) (pattern' ++ (map (\(LHSIdentifier (Identifier n)) -> VarP (mkName n)) args))
+    return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
     where pattern' = (unwrapTupleP (fst env))
-          argsE = do
-            x <- mapM (\(LHSIdentifier (Identifier n)) -> argE (mkName n)) args
-            return x
-            where argE   n = do
-                    x <- argSet n
-                    return $ TupE [argGet n, x]
-                  argGet n = LamE [fst env] (VarE n)
-                  argSet n = do
-                      vName <- newName "v"
-                      return $ LamE [VarP vName, fst env]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(VarP n) -> n) . unwrapTupleP) (fst env))
                                     
 
 evalFunctionCallWithName :: Env -> Name -> [LHS] -> Q EvalState
@@ -361,6 +359,20 @@ thrd (_, _, z) = z
 removeVar :: Pat -> Env -> Env
 removeVar var env = (fst env, TupP $ List.delete var $ (unwrapTupleP . snd) env)
 
+-- "_debug" is a special variable that is never used by the user but
+-- is used by the generated Haskell code to store log messages. Since
+-- Haskell evaluates in a bottom-up fashion, sequential debug statements
+-- will be printed in reversed order. Therefore, all log messages will
+-- first be stored in _debug, and then _debug will be printed in reverse
+-- order after the program has terminated.
+debugLogDecl :: Declaration
+debugLogDecl = GlobalVarDeclaration (Variable (Identifier debugLogName) debugLogType)
+
+debugLogName :: String
+debugLogName = "_debug"
+
+debugLogType = ConT (mkName "[String]")
+
 -- Enumerate all procedure declarations in a janus program
 getProcedures :: Program -> [Declaration]
 getProcedures (Program xs) = filter filterProcs xs
@@ -376,7 +388,7 @@ replace a b (x:xs) | a == x    = b:xs
 
 -- Enumerate all global variable declarations in a janus program
 getVariableDecs :: Program -> [Declaration]
-getVariableDecs (Program decs) = filter filterVars decs
+getVariableDecs (Program decs) = debugLogDecl : (filter filterVars decs)
     where filterVars dec  = case dec of 
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False

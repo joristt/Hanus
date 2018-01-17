@@ -16,16 +16,24 @@ import qualified Data.Char as Char
 
 import Debug.Trace
 
+import Data.List (intercalate)
+
 [hanusT|
     n :: Int;
-    m :: Int;
+    a :: Int;
+    b :: Int;
 
-    procedure n(x :: Bool)
+    procedure fib()
     {
-        #debug x;
-        x += 1;
-        #debug x;
+        if n == 0 then
+            a += 1;
+            b += 1;
+        else
+            n -= 1;
+            #debug n;
+            call fib;
+            a += b;
+            swap b a;
+        fi 1 == 1;
     }
 |]
-
-

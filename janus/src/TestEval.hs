@@ -14,25 +14,23 @@ import StdLib.Operator
 import qualified Data.List as List
 import qualified Data.Char as Char
 
-test = do
-    let temp = trace 20
-    10
+[hanusT|
+    xa :: Int;
+    xb :: Int;
 
---[hanusT|
---    n :: Int;
+    procedure fib(n :: Int)
+    {
+        if n==0 then
+            xa += 1;
+            xb += 1;
+        else
+            n -= 1;
+            call fib n;
+            xa += xb;
+            swap xa xb;
+        fi xa==xb;
+    }
 
---    procedure ifthen(y :: Int)
---    {
---        n += 9;
---        if n==10 then
---            n += 1;
---            if n==10 then
---                n -= 1;
---            else 
---                n += 1;
---            fi n==12;
---        else
---            n -= 1;
---        fi n==12;
---    }
--- |]
+procedure runfib(){local n :: Int = 100000;call fib n;delocal 4;}
+
+|]
