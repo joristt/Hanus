@@ -23,7 +23,7 @@ trace x = Debug.trace (show x) x
 
 -- The purpose of this function is to generate a TH object that represents a program equivalent 
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
--- another file  
+-- another file
 evalProgram :: Program -> Q [Dec]
 evalProgram p = do  
     let nameFwd = mkName "run"
@@ -122,7 +122,7 @@ evalStatement :: Pat -> Statement -> Q [Stmt]
 evalStatement _ (Assignment direction op lhss expr) = evalAssignment direction op lhss expr
 evalStatement p (Call (Identifier i) args)          = evalFunctionCall p i args
 evalStatement p (If exp tb eb _)                    = evalIf p exp tb eb
-evalStatement p (LoopUntil from d l until)          = undefined
+evalStatement p (LoopUntil from d l until)          = evalWhile p from until d l
 evalStatement  _ _ = error "Statement not implementend"
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
@@ -230,9 +230,12 @@ evalIf2 pattern g tb eb = do
                            |                                     v
                            ----------------------------------- False
 -}
-evalWhile :: Pat -> Exp -> Exp -> [Statement] -> [Statement] -> Q ([Stmt], Dec)
+
+--dec <- evalProcedure [] (Procedure (Identifier "asdf123") [] [])
+
+evalWhile :: Pat -> Exp -> Exp -> [Statement] -> [Statement] -> Q [Stmt]
 evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements = do
-    whileProcName <- newName "while"
+    let whileProcName = mkName "while"
 
     whileProcCall <- evalFunctionCallWithName pTup whileProcName [] -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
@@ -251,7 +254,9 @@ evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements =
     let whileProcBlock = whileProcDoBlock ++ whileProcLoopBlock
     whileProcDec      <- evalProcedure2 patList whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
     
-    return (whileIf, whileProcDec)
+    return whileIf
+
+    --return (whileIf, whileProcDec)
 
     where evalStmts stmts = do
               stmts <- concatMapM (evalStatement pTup) stmts

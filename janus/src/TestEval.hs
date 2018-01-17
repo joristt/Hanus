@@ -15,13 +15,18 @@ import StdLib.Operator
 [hanusT|
     n :: Integer;
 
+    procedure while()
+    {
+
+    }
+
     procedure n()
     {
         n += 5;
-        from n = 5
-            do
-                n -= 1;
-            loop
+        from n == 0
+            do n += 1;
+            loop n += 1;
         until n == 1;
+        n += 1;
     }
 |]
