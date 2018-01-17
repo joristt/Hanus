@@ -1,12 +1,21 @@
 import Test.Framework (defaultMain, testGroup)
 import Test.Framework.Providers.HUnit
-import TQQ
-import TSemanticChecker
-import TEval
+import Test.HUnit
+
+import Data.List ((\\))
+import Language.Haskell.TH
+import System.IO.Unsafe (unsafePerformIO)
+
+import AST
+import Parser.JanusParser
+import SemanticChecker (extractVarsE, semanticCheck)
+
+import Debug.Trace
 
 main = defaultMain
   [ constructTestSuite testName testSuite
-  | (testName, testSuite) <- [ ("VAR", varTests)
+  | (testName, testSuite) <- [ ("PRS", parserTests)
+                             , ("VAR", varTests)
                              , ("SEM", semanticTests)
                              , ("QQ", qqTests)
                              , ("EVAL", evalTests)
@@ -15,6 +24,23 @@ main = defaultMain
 
 constructTestSuite s suite =
   testGroup s [testCase (s ++ "_" ++ show i) t | (i, t) <- zip [1..] suite]
+
+shouldParse x = parses x @?= True
+
+parserTests =
+  [ shouldParse "x :: Int; y :: Int;"
+  , shouldParse "x :: Int; procedure foo(y :: Int) { x += y * 42; }"
+  , shouldParse "procedure foo() { if x * 3 == 1 then y += 42; else swap x y; fi False; }"
+  , shouldParse "procedure foo() { local x :: Int = 42; x += 10; delocal 52; }"
+  -- Loop with `do` and `loop`.
+  , shouldParse "procedure foo() { from True do x += 1; loop x += 2; until x == 1000; }"
+  , shouldParse "procedure foo() { from x * 100 == 400 do x += 1; loop if True then x += 1; else complement x; fi True; until x == 1000; }"
+  -- Loop with `do`
+  , shouldParse "procedure foo() { from x * 100 == 400 do x += 1; until x == 1000; }"
+  -- Loop with `loop`.
+  , shouldParse "procedure foo() { from x * 100 == 400 do if True then x += 1; else complement x; fi True; until x == 1000; }"
+  , shouldParse "procedure foo() { call f x y; swap x y; complement x; }"
+  ]
 
 infix 1 @~>
 (@~>) e vars = eVars @?= vars
@@ -36,7 +62,7 @@ varTests =
   , [| initialRec { y = \x -> x + y} |] @~> ["initialRec", "+", "y"]
   ]
 
-semanticTests =
+semanticTests = [] {-
   [ semanticCheck progT1 @?= True
   , semanticCheck progT2 @?= True
   , semanticCheck progT3 @?= True
@@ -68,4 +94,4 @@ semanticTests =
           InfixE (Just $ index x') plus (Just one)
         asgF3 = LHSArray (LHSIdentifier x) (index x') .+= one
         asgT2 = LHSArray (LHSIdentifier x) (index y') .+= one
-        (.+=) e = Assignment False "+=" [e]
+        (.+=) e e' = Assignment "+=" [e] (Just e') -}

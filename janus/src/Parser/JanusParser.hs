@@ -38,6 +38,12 @@ parser1 p fileName line col s = parse_h (assertNoError <$> p <*> pEnd) $ createS
     assertNoError a []     = a
     assertNoError _ (e:es) = error $ "Parsing of Janus code failed in file " ++ fileName ++ ". First error:\n" ++ show e
 
+parses :: String -> Bool
+parses = parses' pProgram
+
+parses' :: Parser a -> String -> Bool
+parses' p source = parse_h (null <$ p <*> pEnd) $ createStr (LineCol 0 0) source
+
 parser2 :: Parser a -> String -> a
 parser2 p = parser1 p "input" 0 0
 
@@ -159,7 +165,7 @@ pLocalVariable :: Parser Statement
 pLocalVariable = LocalVarDeclaration <$ pKey "local" <*> 
                     (fst <$> pVariable ["="]) <*> (fst <$> pExp [";"]) <* pSpaces <*>
                     (fst <$> pBlock (pKey "delocal")) <*>
-                    (fst <$> pExp [";"])
+                    (fst <$> pExp [";"]) <* pSpaces
 
 pIf :: Parser Statement
 pIf = (\(pre, _) (s1, s2) (post, _) -> If pre s1 s2 post) <$ pToken "if" <* pSomeSpace <*> pExp ["then"] <* pSomeSpace <*> pBlock pElse <* pSomeSpace <*> pExp [";"] <* pSpaces
