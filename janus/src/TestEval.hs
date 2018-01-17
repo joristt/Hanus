@@ -33,3 +33,12 @@ import qualified Data.Char as Char
 
 procedure runfib(){local n :: Int = 100000;call fib n;delocal 4;}
 |]
+
+[hanusT|
+    map :: Data.Map Int Int;
+
+    procedure testmap()
+    {
+        map[0] += 10;
+    }
+|]
