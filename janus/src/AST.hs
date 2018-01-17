@@ -72,7 +72,7 @@ instance Show LHS where
   show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
 
 instance Show Statement where
-  show (Assignment toReverse operator lhs exp ) = intercalate ", " (map show lhs) ++ (if toReverse then "~" else "") ++ operator ++ show exp
+  show (Assignment False operator lhs exp) = unwords (map show lhs) ++ " " ++ operator ++ " " ++ show exp
   show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (If pre s1 s2 post) = "if " ++ show pre ++ " then\n"
@@ -80,6 +80,11 @@ instance Show Statement where
     ++ "else\n"
     ++ indent (unlines $ map show s2)
     ++ "fi " ++ show post ++ ";"
+  show (LoopUntil pre s1 s2 post) = "from " ++ show pre ++ "\ndo\n"
+    ++ indent (unlines $ map show s1)
+    ++ "loop\n"
+    ++ indent (unlines $ map show s2)
+    ++ "until " ++ show post ++ ";"
 
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
