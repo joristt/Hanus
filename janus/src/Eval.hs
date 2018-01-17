@@ -122,7 +122,10 @@ evalStatement :: Pat -> Statement -> Q [Stmt]
 evalStatement _ (Assignment direction op lhss expr) = evalAssignment direction op lhss expr
 evalStatement p (Call (Identifier i) args)          = evalFunctionCall p i args
 evalStatement p (If exp tb eb _)                    = evalIf p exp tb eb
-evalStatement p (LoopUntil from d l until)          = undefined
+evalStatement p (LoopUntil from d l until)          = undefined 
+evalStatement p (LocalVarDeclaration var i stmts e) = do
+  varPat <- varToPat var
+  evalLocalVarDec p varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
@@ -256,6 +259,14 @@ evalWhile pTup@(TupP patList) fromGuard untilGuard doStatements loopStatements =
     where evalStmts stmts = do
               stmts <- concatMapM (evalStatement pTup) stmts
               return $ stmts ++ [(NoBindS (tupP2tupE pTup))]
+
+evalLocalVarDec :: Pat -> Pat -> Exp -> [Statement] -> Exp -> Q [Stmt]
+evalLocalVarDec p var init body exit = do
+    tmpN <- newName "tmp"
+    stmts <- concatMapM (evalStatement p) body
+    let body' = DoE (stmts ++ [(NoBindS (tupP2tupE p))])
+    let asg = LetE [ValD var (NormalB init) []] body'
+    return $ [letStmt (VarP tmpN) asg, letStmt p (VarE tmpN)]
 
 -- *** HELPERS *** ---
 

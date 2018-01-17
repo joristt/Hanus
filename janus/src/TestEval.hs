@@ -11,20 +11,22 @@ import StdLib.Operator
 import QQ
 import StdLib.Operator
 
+import qualified Data.List as List
+import qualified Data.Char as Char
 
 [hanusT|
     x :: Int;
-    y :: Int;
-    stack :: [Int];
 
-    procedure stacktest()
+    procedure foo()
     {
-        x += 1;
-        push stack x;
-        push stack y;
-        x += 100;
-        push stack x;
-        pop stack y;
+        call bar;
+    } 
+
+    procedure bar()
+    {
+        local n :: T = 10;
+          n += 10
+        delocal n == 20;
     }
 |]
 
