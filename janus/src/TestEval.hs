@@ -15,14 +15,16 @@ import qualified Data.List as List
 import qualified Data.Char as Char
 
 [hanusT|
-    x :: Int;
+    n :: Int;
 
-    procedure foo()
+    procedure ifthen()
     {
-        call bar;
-    } 
+        n += 10;
+        if n==10 then
+            n += 10;
+        fi n==20;
 
-procedure bar() {x += 10; local n :: Int = 42;n += 10;x += n;delocal 52;}
+    }
 |]
 
 
