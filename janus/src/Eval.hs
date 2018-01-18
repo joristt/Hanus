@@ -101,18 +101,16 @@ evalProcedure globalArgs (Procedure n vs b) = do
     return (FunD name [Clause (globalArgs ++ inputArgs) (fst body) []], snd body)
 
 -- Evaluate a procedure to it's corresponding TH representation
-evalProcedure2 :: [Pat] -> Name -> [Variable] -> [Stmt] -> Q Dec
-evalProcedure2 globalArgs name vs stmts = do
-    let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
-    let pattern = TupP (globalArgs)
-    body <- evalProcedureBody2 stmts (pattern, TupP (globalArgs ++ inputArgs))
-    return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
+evalProcedure2 :: Name -> Pat -> [Stmt] -> Q Dec
+evalProcedure2 name inputTup@(TupP inputArgs) stmts = do
+    body <- evalProcedureBody2 stmts inputTup
+    return $ FunD name [Clause inputArgs body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody2 :: [Stmt] -> Env -> Q Body
+evalProcedureBody2 :: [Stmt] -> Pat -> Q Body
 evalProcedureBody2 stmts environment = do
     return $ NormalB $ DoE $ stmts ++ [returnTup]
-        where returnTup = NoBindS $ tupP2tupE (fst environment)
+        where returnTup = NoBindS $ tupP2tupE environment
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 evalProcedureBody :: [Statement] -> Env -> Q (Body, [Dec])
@@ -130,6 +128,7 @@ evalStatement env (LoopUntil from d l until)          = evalWhile env from until
 evalStatement env (Log   lhss)                        = evalLog env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = do
     varPat <- varToPat var
+    let _ = unsafePerformIO $ putStrLn $ show varPat
     evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
@@ -189,6 +188,16 @@ evalFunctionCall env name args = do
          ((VarE . mkName) name) (pattern' ++ (map (\(LHSIdentifier (Identifier n)) -> VarP (mkName n)) args))
     return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
     where pattern' = (unwrapTupleP (fst env))
+
+evalFunctionCallWithName2 :: Env -> Name -> Pat -> Q EvalState
+evalFunctionCallWithName2 env name (TupP args) = do
+    tmpN <- newName "tmp"
+    f <- foldM (\exp pat -> do
+                    arg <- expFromVarP pat
+                    return (AppE exp arg))
+         (VarE name)
+         args
+    return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
                                     
 
 evalFunctionCallWithName :: Env -> Name -> [LHS] -> Q EvalState
@@ -264,8 +273,7 @@ evalSingleBranchIf env g eb = do
 evalWhile :: Env -> Exp -> Exp -> [Statement] -> [Statement] -> Q EvalState
 evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatements = do
     whileProcName <- newName "while"
-
-    whileProcCall <- evalFunctionCallWithName env whileProcName [] -- the empty list here shouldn't be empty.
+    whileProcCall <- evalFunctionCallWithName2 (scope, scope) whileProcName scope -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
     err <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
     -- The err will be thrown in a do block that should return a value, so we actually
@@ -285,7 +293,7 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
     doStmts             <- evalStmts doStatements
     let whileProcBlock = doStmts ++ (frst whileProcDoIf)
 
-    whileProcDec      <- evalProcedure2 globals whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
+    whileProcDec      <- evalProcedure2 whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
 
     return (frst whileIf, [whileProcDec], env)
 
@@ -300,7 +308,7 @@ evalLocalVarDec env var init body exit = do
     stmts <- foldM accResult (initR env') body
     let body' = DoE ((frst stmts) ++ [(NoBindS (tupP2tupE $ snd env))])
     let asg = LetE [ValD var (NormalB init) []] body'
-    return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], [], env)
+    return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], scnd stmts, env)
 
 -- *** HELPERS *** ---
 
