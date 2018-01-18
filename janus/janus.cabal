@@ -14,6 +14,7 @@ library
                      , StdLib.ArrayIndexer
                      , StdLib.DefaultValue
                      , StdLib.FieldIndexer
+                     , StdLib.BinaryTree
                      , StdLib.Operator
                      , Parser.JanusParser
                      , Parser.HaskellParser
