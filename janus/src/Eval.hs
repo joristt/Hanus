@@ -34,7 +34,10 @@ type EvalState = ([Stmt], [Dec], Env)
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
 -- another file
 evalProgram :: Program -> Q [Dec]
-evalProgram p = do  
+evalProgram p = do
+
+    canEvalProgram
+
     let nameFwd = mkName "run"
     nameBwd <- newName "run_bwd"
     -- generate program entry point ('run' function)
@@ -59,12 +62,23 @@ evalProgram p = do
 -- Used for testing purposes, hence the suffix 'T'
 evalProgramT :: Program -> Q [Dec]
 evalProgramT p@(Program decls) = do
+
+    canEvalProgram
+
     -- generate pattern for program state
     pt <- statePattern globalVars
     fdecs <- mapM (evalProcedure pt) procedures
     return $ (map fst fdecs) ++ (concatMap snd fdecs)
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
+
+canEvalProgram :: Q ()
+canEvalProgram = do
+    let requiredExts = [ScopedTypeVariables]
+    scopedTypeVarsOn <- mapM isExtEnabled requiredExts >>= return . and
+    if not scopedTypeVarsOn then
+        error "The ScopedTypeVariables extension should be enabled for Hanus to work."
+    else return ()
 
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
@@ -150,11 +164,10 @@ evalLog env xs = do
     -- We take the tail because the first Exp is a separator.
     let logUpdateStmts = ListE $ tail $ evalLogUpdate xs
     tmpN <- newName "tmp"
-    let concatedList = ListE [(AppE (toE "concat") logUpdateStmts)]
-    let newLog = AppE (AppE (toE "++") (toE logName)) concatedList
-    let let1 = letStmt (VarP tmpN) newLog
-    let let2 = letStmt (toP logName) (VarE tmpN)
-    return ([let1, let2], [], env)
+    let concatedList = (AppE (toE "concat") logUpdateStmts)
+    let zero = LitE $ IntegerL 0
+    let traceExp  = AppE (AppE (toE "trace") concatedList) zero
+    return ([letStmt (BangP $ VarP tmpN) traceExp], [], env)
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
@@ -351,19 +364,6 @@ toE s = VarE (mkName s)
 toP :: String -> Pat
 toP s = VarP (mkName s)
 
--- "_log" is a special variable that is never used by the user but
--- is used by the generated Haskell code to store log messages. Since
--- Haskell evaluates in a bottom-up fashion, sequential log statements
--- will be printed in reversed order. Therefore, all log messages will
--- first be collected in _log, and then _log will be printed when the
--- program has terminated.
-logDecl :: Declaration
-logDecl = GlobalVarDeclaration (Variable (Identifier logName) logType)
-    where logType = ConT (mkName "[String]")
-
-logName :: String
-logName = "_log"
-
 -- Enumerate all procedure declarations in a janus program
 getProcedures :: Program -> [Declaration]
 getProcedures (Program xs) = filter filterProcs xs
@@ -379,7 +379,7 @@ replace a b (x:xs) | a == x    = b:xs
 
 -- Enumerate all global variable declarations in a janus program
 getVariableDecs :: Program -> [Declaration]
-getVariableDecs (Program decs) = logDecl : (filter filterVars decs)
+getVariableDecs (Program decs) = filter filterVars decs
     where filterVars dec  = case dec of 
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False

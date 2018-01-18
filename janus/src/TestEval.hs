@@ -14,6 +14,8 @@ import StdLib.Operator
 import qualified Data.List as List
 import qualified Data.Char as Char
 
+import Debug.Trace
+
 [hanusT|
 
     m :: Int;
@@ -36,6 +38,7 @@ import qualified Data.Char as Char
         local n  :: Int = 4;
         local xa :: Int = 0;
         local xb :: Int = 0;
+            #log n xa xb;
             call fib n xa xb;
             #log n xa xb;
         delocal -4;
