@@ -152,8 +152,7 @@ evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
 evalStatement env (Log   lhss)                        = evalLog env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = do
-    varPat <- varToPat var
-    evalLocalVarDec env varPat i stmts e
+    evalLocalVarDec env var i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
 -- If input is ["x"] then output is [", ", "x", " : ", "<value_of_x>"]
@@ -315,14 +314,37 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
               stmts <- foldM accResult (initR env) stmts
               return $ (frst stmts)
 
-evalLocalVarDec :: Env -> Pat -> Exp -> [Statement] -> Exp -> Q EvalState
-evalLocalVarDec env var init body exit = do
+evalLocalVarDec :: Env -> Variable -> Exp -> [Statement] -> Exp -> Q EvalState
+evalLocalVarDec env v@(Variable (Identifier varName) _) init body exit = do
+    varPat <- varToPat v
     tmpN <- newName "tmp"
-    let env' = (fst env, (TupP . (:) var. unwrapTupleP . snd) env)
+    let env' = (fst env, (TupP . (:) varPat. unwrapTupleP . snd) env)
     stmts <- foldM accResult (initR env') body
-    let body' = DoE ((frst stmts) ++ [(NoBindS (tupP2tupE $ snd env))])
-    let asg = LetE [ValD var (NormalB init) []] body'
+    doReturn <- localVarReturnStmt env varName exit
+    let body' = DoE ((frst stmts) ++ [doReturn])
+    let asg = LetE [ValD varPat (NormalB init) []] body'
     return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], scnd stmts, env)
+
+-- An if-then-else statement that returns the tuple with updated values, *IF*
+-- the local var has the value that the programmer stated at delocal. If they
+-- didn't, an error will be thrown.
+localVarReturnStmt :: Env -> String -> Exp -> Q Stmt
+localVarReturnStmt env varName exitCondition = do
+    e1     <- [|"Variable '"|]
+    let e2  = LitE $ StringL varName
+    e3     <- [|"' had the value '"|]
+    let e4  = AppE (toE "show") (toE varName)
+    e5     <- [|"' when it was delocalized, but it should have had the value '"|]
+    let e6  = AppE (toE "show") exitCondition
+    e7     <- [|"'."|]
+
+    let errMsg = AppE (toE "concat") (ListE [e1,e2,e3,e4,e5,e6,e7])
+    let guard  = AppE (AppE (toE "==") (toE varName)) exitCondition
+    let tb     = DoE [NoBindS (tupP2tupE $ snd env)]
+    let eb     = AppE (toE "error") errMsg
+
+    return $ NoBindS $ CondE guard tb eb    
+
 
 -- *** HELPERS *** ---
 
