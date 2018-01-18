@@ -151,8 +151,7 @@ evalStatement env (Uncall (Identifier i) args)        = evalFunctionCall env (in
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
 evalStatement env (Log   lhss)                        = evalLog env lhss
-evalStatement env (LocalVarDeclaration var i stmts e) = do
-    evalLocalVarDec env var i stmts e
+evalStatement env (LocalVarDeclaration var i stmts e) = evalLocalVarDec env var i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
 -- If input is ["x"] then output is [", ", "x", " : ", "<value_of_x>"]
