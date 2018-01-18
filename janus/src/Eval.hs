@@ -71,15 +71,15 @@ genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t)) = do 
     let name = nameId ident
     defVal <- runQ [|defaultValue|]
-    return (ValD (VarP name) (NormalB (defVal)) []) 
+    return (ValD (SigP (VarP name) t) (NormalB (defVal)) [])
 
 -- Generate an expression that calls the main function with all global 
 -- variables as state
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
     name <- [e|hanus_main|]
-    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _)) -> 
-        return ((VarE . mkName) x)) decs
+    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) t)) -> 
+        return (SigE ((VarE . mkName) x) t)) decs
     x <- foldM (\exp el -> 
         return (AppE exp el)) name args
     return x
@@ -95,7 +95,7 @@ evalProcedure globalArgs (Procedure n vs b) = do
     let name = case n of 
                    (Identifier "main") -> nameId $ Identifier "hanus_main"
                    otherwise -> nameId n
-    let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
+    let inputArgs = map (\(Variable (Identifier n) t) -> SigP (VarP (mkName n)) t) vs
     let pattern = TupP globalArgs
     body <- evalProcedureBody b (pattern, TupP (globalArgs ++ inputArgs))
     return (FunD name [Clause (globalArgs ++ inputArgs) (fst body) []], snd body)
@@ -128,7 +128,6 @@ evalStatement env (LoopUntil from d l until)          = evalWhile env from until
 evalStatement env (Log   lhss)                        = evalLog env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = do
     varPat <- varToPat var
-    let _ = unsafePerformIO $ putStrLn $ show varPat
     evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
 
@@ -303,16 +302,20 @@ nameId (Identifier n) = mkName n
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
     let name = nameId n
-    return $ VarP name
+    return $ SigP (VarP name) t
 
 -- Create a TH expression referencing a variable from a TH pattern referencing
 -- a variable
 expFromVarP :: Pat -> Q Exp
-expFromVarP (VarP name) = return (VarE name) 
+expFromVarP p = return $ pToE p
 
 -- Convert a TH tuple pattern to a TH tuple expression
 tupP2tupE :: Pat -> Exp
-tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
+tupP2tupE (TupP pats) = TupE $ map pToE pats
+
+pToE :: Pat -> Exp
+pToE (VarP name)          = VarE name
+pToE (SigP (VarP name) t) = SigE (VarE name) t
 
 unwrapTupleP :: Pat -> [Pat]
 unwrapTupleP (TupP xs) = xs
@@ -380,9 +383,3 @@ getVariableDecs (Program decs) = logDecl : (filter filterVars decs)
     where filterVars dec  = case dec of 
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False
-
--- Gets all the names of the global variables in the program
-variableNames :: Program -> [String]
-variableNames program = map varToName (getVariableDecs program)
-    where varToName (GlobalVarDeclaration (Variable (Identifier n) _)) = n
-

@@ -15,6 +15,9 @@ import qualified Data.List as List
 import qualified Data.Char as Char
 
 [hanusT|
+
+    m :: Int;
+
     procedure fib(n :: Int, xa :: Int, xb :: Int)
     {
         if n==0 then
