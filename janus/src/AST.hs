@@ -72,6 +72,22 @@ instance Show LHS where
   show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
 
 instance Show Statement where
-  show (Assignment operator lhs exp ) = intercalate ", " (map show lhs) ++ operator ++ show exp
+  show (Assignment operator lhs exp ) = unwords (map show lhs) ++ " " ++ operator ++ " " ++ show exp
   show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ unwords (map show lhs)
+  show (If pre s1 s2 post) = "if " ++ show pre ++ " then\n"
+    ++ indent (unlines $ map show s1)
+    ++ "else\n"
+    ++ indent (unlines $ map show s2)
+    ++ "fi " ++ show post ++ ";"
+  show (LoopUntil pre s1 s2 post) = "from " ++ show pre ++ "\ndo\n"
+    ++ indent (unlines $ map show s1)
+    ++ "loop\n"
+    ++ indent (unlines $ map show s2)
+    ++ "until " ++ show post ++ ";"
+  show (LocalVarDeclaration v init block exp) = "local " ++ show v ++ " = " ++ show init ++ ";\n"
+    ++ indent (unlines $ map show block)
+    ++ "delocal " ++ show exp ++ ";"
+
+indent :: String -> String
+indent = unlines . map ("  " ++) . lines
