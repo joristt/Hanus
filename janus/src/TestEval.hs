@@ -41,9 +41,9 @@ import Debug.Trace
             #log n xa xb;
             call fib n xa xb;
             #log n xa xb;
-        delocal -4;
-        delocal -4;
-        delocal -4;
+        delocal 8;
+        delocal 5;
+        delocal 0;
     }
 
 |]

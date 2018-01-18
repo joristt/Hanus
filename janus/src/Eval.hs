@@ -3,6 +3,7 @@
 module Eval where
 
 import AST
+import ReverseAST
 import StdLib.Operator
 import StdLib.DefaultValue
 
@@ -35,9 +36,7 @@ type EvalState = ([Stmt], [Dec], Env)
 -- another file
 evalProgram :: Program -> Q [Dec]
 evalProgram p = do
-
-    canEvalProgram
-
+    throwExceptionIfEvalImpossible
     let nameFwd = mkName "run"
     nameBwd <- newName "run_bwd"
     -- generate program entry point ('run' function)
@@ -62,18 +61,15 @@ evalProgram p = do
 -- Used for testing purposes, hence the suffix 'T'
 evalProgramT :: Program -> Q [Dec]
 evalProgramT p@(Program decls) = do
-
-    canEvalProgram
-
+    throwExceptionIfEvalImpossible
     -- generate pattern for program state
     pt <- statePattern globalVars
-    fdecs <- mapM (evalProcedure pt) procedures
-    return $ (map fst fdecs) ++ (concatMap snd fdecs)
+    concatMapM (evalProcedure pt) procedures
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
 
-canEvalProgram :: Q ()
-canEvalProgram = do
+throwExceptionIfEvalImpossible :: Q ()
+throwExceptionIfEvalImpossible = do
     let requiredExts = [ScopedTypeVariables]
     scopedTypeVarsOn <- mapM isExtEnabled requiredExts >>= return . and
     if not scopedTypeVarsOn then
@@ -103,9 +99,21 @@ statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
     where toPat (GlobalVarDeclaration var) = varToPat var
 
+-- Returns a list with:
+--   * the actual proc declaration
+--   * the inverse proc declaration
+--   * (possibly) additional declarations that were generated as helper
+--     declarations to make the actual procs work.
+evalProcedure :: [Pat] -> Declaration -> Q ([Dec])
+evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
+    let p' = Procedure (Identifier (invert n)) vs (reverseBlock b)
+    (pDecl,  hs1) <- actualEvalProcedure globalArgs $ p
+    (pDecl', hs2) <- actualEvalProcedure globalArgs $ p'
+    return $ pDecl : pDecl' : hs1 ++ hs2
+
 -- Evaluate a procedure to it's corresponding TH representation
-evalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
-evalProcedure globalArgs (Procedure n vs b) = do
+actualEvalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
+actualEvalProcedure globalArgs (Procedure n vs b) = do
     let name = case n of 
                    (Identifier "main") -> nameId $ Identifier "hanus_main"
                    otherwise -> nameId n
@@ -115,14 +123,16 @@ evalProcedure globalArgs (Procedure n vs b) = do
     return (FunD name [Clause (globalArgs ++ inputArgs) (fst body) []], snd body)
 
 -- Evaluate a procedure to it's corresponding TH representation
-evalProcedure2 :: Name -> Pat -> [Stmt] -> Q Dec
-evalProcedure2 name scopeTup@(TupP scope) stmts = do
-    body <- evalProcedureBody2 stmts scopeTup
+-- This function is specifically used as a part of evalWhile.
+actualEvalProcedure' :: Name -> Pat -> [Stmt] -> Q Dec
+actualEvalProcedure' name scopeTup@(TupP scope) stmts = do
+    body <- evalProcedureBody' stmts scopeTup
     return $ FunD name [Clause scope body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody2 :: [Stmt] -> Pat -> Q Body
-evalProcedureBody2 stmts entireScope = do
+-- This function is specifically used as a part of evalWhile.
+evalProcedureBody' :: [Stmt] -> Pat -> Q Body
+evalProcedureBody' stmts entireScope = do
     return $ NormalB $ DoE $ stmts ++ [returnTup]
         where returnTup = NoBindS $ tupP2tupE entireScope
 
@@ -137,6 +147,7 @@ evalProcedureBody ss env = do
 evalStatement :: Env -> Statement -> Q EvalState
 evalStatement env (Assignment direction op lhss expr) = evalAssignment env direction op lhss expr
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
+evalStatement env (Uncall (Identifier i) args)        = evalFunctionCall env (invert i) args
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
 evalStatement env (Log   lhss)                        = evalLog env lhss
@@ -296,7 +307,7 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
     doStmts             <- evalStmts doStatements
     let whileProcBlock = doStmts ++ (frst whileProcDoIf)
 
-    whileProcDec      <- evalProcedure2 whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
+    whileProcDec      <- actualEvalProcedure' whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
 
     return (frst whileIf, [whileProcDec], env)
 
@@ -396,3 +407,6 @@ getVariableDecs (Program decs) = filter filterVars decs
     where filterVars dec  = case dec of 
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False
+
+-- The inverse of a procedure call proc_call_name is stored as proc_call_name'
+invert name = name ++ "'"
