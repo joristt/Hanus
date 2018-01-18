@@ -110,7 +110,7 @@ pBlock p = (\a -> ([], a)) <$> p <|> ((\x (y, a) -> (x : y, a)) <$> pStatement <
 
 pStatement :: Parser Statement
 pStatement
-  =   pDebug
+  =   pLog
   <|> pAssignment
   <|> pCall
   <|> pPrefixOperatorAssignment
@@ -121,8 +121,8 @@ pStatement
 pAssignment :: Parser Statement
 pAssignment = (\x y z -> Assignment False y x z) <$> pSomeLHS <* pSpaces <*> pOperator <* pSpaces <*> (fst <$> pExp [";"]) <* pSpaces
 
-pDebug :: Parser Statement
-pDebug = Log <$ pToken "#log" <* pSpaces <*> pSomeLHS <* pSpaces <* pToken ";" <* pSpaces
+pLog :: Parser Statement
+pLog = Log <$ pToken "#log" <* pSpaces <*> pSomeLHS <* pToken ";" <* pSpaces
 
 pOperator :: Parser String
 pOperator =

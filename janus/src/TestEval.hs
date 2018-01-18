@@ -15,22 +15,29 @@ import qualified Data.List as List
 import qualified Data.Char as Char
 
 [hanusT|
-    xa :: Int;
-    xb :: Int;
-
-    procedure fib(n :: Int)
+    procedure fib(n :: Int, xa :: Int, xb :: Int)
     {
         if n==0 then
             xa += 1;
             xb += 1;
         else
             n -= 1;
-            call fib n;
+            call fib n xa xb;
             xa += xb;
             swap xa xb;
         fi xa==xb;
     }
 
-procedure runfib(){local n :: Int = 100000;call fib n;delocal 4;}
+    procedure runfib()
+    {
+        local n  :: Int = 4;
+        local xa :: Int = 0;
+        local xb :: Int = 0;
+            call fib n xa xb;
+            #log n xa xb;
+        delocal -4;
+        delocal -4;
+        delocal -4;
+    }
 
 |]
