@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-} 
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, BangPatterns #-} 
 
 module Eval where
 
@@ -155,12 +155,12 @@ evalLogUpdate (x:xs) = do
     let commaExp   = LitE $ StringL ", "
     let valExp     = AppE (toE "show") (toE name)
     [commaExp, nameExp, sepExp, valExp] ++ evalLogUpdate xs
-    --msgExp ++ evalLogUpdate xs
         where lhsToString (LHSIdentifier (Identifier name)) = name
-              --a `append` b = AppE (AppE (VarE (mkName "++")) b) a
 
+-- Evaluates a "#log" statement.
 evalLog :: Env -> [LHS] -> Q EvalState
 evalLog env xs = do
+    throwLogExceptionIfNecessary
     -- We take the tail because the first Exp is a separator.
     let logUpdateStmts = ListE $ tail $ evalLogUpdate xs
     tmpN <- newName "tmp"
@@ -168,6 +168,19 @@ evalLog env xs = do
     let zero = LitE $ IntegerL 0
     let traceExp  = AppE (AppE (toE "trace") concatedList) zero
     return ([letStmt (BangP $ VarP tmpN) traceExp], [], env)
+
+-- Throws an exception if the user has "#log" statements in their code, but
+-- has not imported Debug.Trace.
+throwLogExceptionIfNecessary :: Q ()
+throwLogExceptionIfNecessary = do
+    ModuleInfo mods <- thisModule >>= reifyModule
+    let canLog = any sDebugMod mods
+    if not canLog then
+        error "You need to add the Haskell line 'import Debug.Trace' at the top (outside the Oxford brackets) of the file in which you use the Hanus #log statement."
+    else
+        return ()
+        where sDebugMod (Module _ (ModName "Debug.Trace")) = True
+              sDebugMod _                                  = False
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
