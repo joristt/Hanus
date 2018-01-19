@@ -5,6 +5,7 @@ module Eval where
 import AST
 import StdLib.Operator
 import StdLib.DefaultValue
+import StdLib.ArrayIndexer
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
@@ -18,11 +19,9 @@ import Data.Maybe
 
 import System.IO.Unsafe
 
-import Debug.Trace
+import qualified Debug.Trace as Debug
 
---import qualified Debug.Trace as Debug
-
---trace x = trace (show x) x
+trace x = Debug.trace (show x) x
 
 type Env = (Globals, Scope)
 type Globals = Pat
@@ -65,6 +64,11 @@ evalProgramT p@(Program decls) = do
     return $ (map fst fdecs) ++ (concatMap snd fdecs)
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
+
+-- generate a let statement from pattern and expression of the form
+-- let *pat* = *exp* to be used in do expressions
+letStmt :: Pat -> Exp -> Stmt
+letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
@@ -127,37 +131,10 @@ evalStatement env (Assignment direction op lhss expr) = evalAssignment env direc
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
-evalStatement env (Debug lhss)                        = evalDebug env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = do
-    varPat <- varToPat var
-    evalLocalVarDec env varPat i stmts e
+  varPat <- varToPat var
+  evalLocalVarDec env varPat i stmts e
 evalStatement  _ _ = error "Statement not implementend"
-
--- Takes a list of LHS's that should be debugged (e.g. ["x"]) and
--- returns [Assignment True "+=" ["x"] (trace ("m: " ++ (show m)) 0)]
-evalLogUpdate :: [LHS] -> Q [Stmt]
-evalLogUpdate [] = return []
-evalLogUpdate (x:xs) = do
-    let name     = lhsToString x
-    let nameExp  = LitE $ StringL name
-    let zeroExp  = LitE $ IntegerL 0
-    let sepExp   = LitE $ StringL ": "
-    let debugExp = VarE (mkName debugLogName)
-    let debugPat = VarP (mkName debugLogName)
-    let valExp   = ListE [AppE (VarE (mkName "show")) (VarE (mkName name))]
-    let msgExp   = joinExp (joinExp nameExp sepExp) valExp
-    let prependExp = AppE (AppE (VarE (mkName "++")) debugExp) valExp
-    tmpN <- newName "tmp"
-    let let1 = letStmt (VarP tmpN) prependExp
-    let let2 = letStmt debugPat (VarE tmpN)
-    return [let1, let2]
-        where lhsToString (LHSIdentifier (Identifier name)) = name
-              joinExp a b = AppE (AppE (VarE (mkName "++")) a) b
-
-evalDebug :: Env -> [LHS] -> Q EvalState
-evalDebug env xs = do
-    logUpdateStmts <- evalLogUpdate xs
-    return (logUpdateStmts, [], env)
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
@@ -168,17 +145,29 @@ evalAssignment env direction op lhss exp = do
     op' <- case direction of 
                False -> [|(\(Operator fwd _) -> fwd)|]
                True  -> [|(\(Operator _ bwd) -> bwd)|]
-    let fApp = AppE (AppE (AppE op' f) arg) exp
-    tmpN <- newName "tmp"
-    return ([letStmt (VarP tmpN) fApp, letStmt pat (VarE tmpN)], [], env)
-      where arg = case lhss of
-                    [(LHSIdentifier ident)] -> VarE $ nameId ident
-                    lst@(x:xs) -> TupE $ map (\(LHSIdentifier ident) -> (VarE . nameId) ident) lst
-                    otherwise  -> error "Only LHSIdentifier can be evaluated currently"
-            pat = case lhss of
-                    [(LHSIdentifier ident)] -> VarP $ nameId ident
-                    lst@(x:xs) -> TupP $ map (\(LHSIdentifier ident) -> (VarP . nameId) ident) lst
-                    otherwise  -> error "Only LHSIdentifier can be evaluated currently"
+    let vf = AppE op' f
+    vNames <- replicateM (length lhss) (newName "v")
+    let valuesP = (TupP . map VarP) vNames
+    let call = letStmt valuesP argsE
+    restores <- concatMapM restoreStmt (zip vNames lhss)
+    return (call:restores, [], env)
+    where argsE = (TupE . map argE) lhss
+          argE lhs = case lhs of
+                       (LHSIdentifier ident) -> VarE $ nameId ident
+                       (LHSArray lhs exp)    -> 
+                         AppE (AppE ((VarE . mkName) "indexerGet") (argE lhs)) exp
+                       (LHSField _ _) -> undefined
+          restoreStmt (vname, lhs) = 
+            case lhs of 
+              (LHSIdentifier ident) -> return $ [letStmt (VarP $ nameId ident) (VarE vname)]
+              (LHSArray lhs exp)    -> do
+                tmpN <- newName "tmp"
+                let res = letStmt (VarP tmpN) (AppE (AppE (AppE ((VarE . mkName) "indexerSet") (argE lhs)) exp) (VarE vname))
+                return [res, letStmt (lhsP lhs) (VarE tmpN)]
+          lhsP lhs = case lhs of
+                       (LHSIdentifier ident) -> VarP $ nameId ident
+                       otherwise             -> undefined
+
 
 -- Evaluate a janus procedure call to it's corresponding TH representation
 evalFunctionCall :: Env -> String -> [LHS] -> Q EvalState
@@ -305,11 +294,6 @@ evalLocalVarDec env var init body exit = do
 
 -- *** HELPERS *** ---
 
--- generate a let statement from pattern and expression of the form
--- let *pat* = *exp* to be used in do expressions
-letStmt :: Pat -> Exp -> Stmt
-letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
-
 nameId :: Identifier -> Name
 nameId (Identifier n) = mkName n
 
@@ -357,20 +341,6 @@ thrd (_, _, z) = z
 removeVar :: Pat -> Env -> Env
 removeVar var env = (fst env, TupP $ List.delete var $ (unwrapTupleP . snd) env)
 
--- "_debug" is a special variable that is never used by the user but
--- is used by the generated Haskell code to store log messages. Since
--- Haskell evaluates in a bottom-up fashion, sequential debug statements
--- will be printed in reversed order. Therefore, all log messages will
--- first be stored in _debug, and then _debug will be printed in reverse
--- order after the program has terminated.
-debugLogDecl :: Declaration
-debugLogDecl = GlobalVarDeclaration (Variable (Identifier debugLogName) debugLogType)
-
-debugLogName :: String
-debugLogName = "_debug"
-
-debugLogType = ConT (mkName "[String]")
-
 -- Enumerate all procedure declarations in a janus program
 getProcedures :: Program -> [Declaration]
 getProcedures (Program xs) = filter filterProcs xs
@@ -386,7 +356,7 @@ replace a b (x:xs) | a == x    = b:xs
 
 -- Enumerate all global variable declarations in a janus program
 getVariableDecs :: Program -> [Declaration]
-getVariableDecs (Program decs) = debugLogDecl : (filter filterVars decs)
+getVariableDecs (Program decs) = filter filterVars decs
     where filterVars dec  = case dec of 
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False

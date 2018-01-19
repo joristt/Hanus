@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes, AllowAmbiguousTypes #-}
 
 module TestEval where
 
@@ -10,6 +10,8 @@ import StdLib.Operator
 
 import QQ
 import StdLib.Operator
+import StdLib.ArrayIndexer
+import StdLib.DefaultValue
 
 import qualified Data.List as List
 import qualified Data.Char as Char
