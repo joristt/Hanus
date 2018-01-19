@@ -3,6 +3,8 @@
 
 module StdLib.DefaultValue where
 
+import Data.Map
+
 class DefaultValue a where
   defaultValue :: a
 
@@ -14,3 +16,6 @@ instance DefaultValue Bool where
 
 instance DefaultValue [a] where
   defaultValue = []
+
+instance DefaultValue (Map a b) where
+  defaultValue = empty

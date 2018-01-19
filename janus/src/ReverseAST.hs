@@ -25,3 +25,4 @@ reverseStmt stmt =
     (If e s s' e') -> If e' (reverseBlock s) (reverseBlock s') e
     (LoopUntil e s s' e') -> LoopUntil e' (reverseBlock s) (reverseBlock s') e
     (LocalVarDeclaration var e s e') -> LocalVarDeclaration var e' (reverseBlock s) e
+    l@(Log _) -> l

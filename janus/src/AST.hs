@@ -41,9 +41,9 @@ data Statement
   --   block
   -- delocal expr;
   | LocalVarDeclaration Variable Exp Block Exp
-  -- debug expr;
-  -- This prints the expr to stdout.
-  | Debug [LHS]
+  -- #log expr1 expr2 ...;
+  -- This prints the exprs in format "expr1name : expr1value, expr2name : expr2value" etc...
+  | Log [LHS]
 
 {-
 Examples:
@@ -88,7 +88,10 @@ instance Show Statement where
     ++ "loop\n"
     ++ indent (unlines $ map show s2)
     ++ "until " ++ show post ++ ";"
-  show _ = ""
+  show (LocalVarDeclaration v init block exp) = "local " ++ show v ++ " = " ++ show init ++ ";\n"
+    ++ indent (unlines $ map show block)
+    ++ "delocal " ++ show exp ++ ";"
+  show (Log lhs) = intercalate ", " $ map show lhs
 
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines

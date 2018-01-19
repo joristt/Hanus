@@ -1,8 +1,9 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-} 
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, BangPatterns #-} 
 
 module Eval where
 
 import AST
+import ReverseAST
 import StdLib.Operator
 import StdLib.DefaultValue
 import StdLib.ArrayIndexer
@@ -21,8 +22,6 @@ import System.IO.Unsafe
 
 import qualified Debug.Trace as Debug
 
-trace x = Debug.trace (show x) x
-
 type Env = (Globals, Scope)
 type Globals = Pat
 type Scope = Pat
@@ -33,7 +32,8 @@ type EvalState = ([Stmt], [Dec], Env)
 -- to the given janus program. The resulting TH object can then be spliced and run from within 
 -- another file
 evalProgram :: Program -> Q [Dec]
-evalProgram p = do  
+evalProgram p = do
+    throwExceptionIfEvalImpossible
     let nameFwd = mkName "run"
     nameBwd <- newName "run_bwd"
     -- generate program entry point ('run' function)
@@ -58,10 +58,10 @@ evalProgram p = do
 -- Used for testing purposes, hence the suffix 'T'
 evalProgramT :: Program -> Q [Dec]
 evalProgramT p@(Program decls) = do
+    throwExceptionIfEvalImpossible
     -- generate pattern for program state
     pt <- statePattern globalVars
-    fdecs <- mapM (evalProcedure pt) procedures
-    return $ (map fst fdecs) ++ (concatMap snd fdecs)
+    concatMapM (evalProcedure pt) procedures
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
 
@@ -70,20 +70,28 @@ evalProgramT p@(Program decls) = do
 letStmt :: Pat -> Exp -> Stmt
 letStmt pattern exp = LetS [ValD pattern (NormalB exp) []]
 
+throwExceptionIfEvalImpossible :: Q ()
+throwExceptionIfEvalImpossible = do
+    let requiredExts = [ScopedTypeVariables]
+    scopedTypeVarsOn <- mapM isExtEnabled requiredExts >>= return . and
+    if not scopedTypeVarsOn then
+        error "The ScopedTypeVariables extension should be enabled for Hanus to work."
+    else return ()
+
 -- Generate variable declarations for global variables
 genDec :: Declaration -> Q Dec
 genDec (GlobalVarDeclaration (Variable ident t)) = do 
     let name = nameId ident
     defVal <- runQ [|defaultValue|]
-    return (ValD (VarP name) (NormalB (defVal)) []) 
+    return (ValD (SigP (VarP name) t) (NormalB (defVal)) [])
 
 -- Generate an expression that calls the main function with all global 
 -- variables as state
 getMain :: [Declaration] -> Q Exp
 getMain decs = do 
     name <- [e|hanus_main|]
-    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) _)) -> 
-        return ((VarE . mkName) x)) decs
+    args <- mapM (\(GlobalVarDeclaration (Variable (Identifier x) t)) -> 
+        return (SigE ((VarE . mkName) x) t)) decs
     x <- foldM (\exp el -> 
         return (AppE exp el)) name args
     return x
@@ -93,48 +101,97 @@ statePattern :: [Declaration] -> Q [Pat]
 statePattern varDecs = mapM toPat varDecs
     where toPat (GlobalVarDeclaration var) = varToPat var
 
+-- Returns a list with:
+--   * the actual proc declaration
+--   * the inverse proc declaration
+--   * (possibly) additional declarations that were generated as helper
+--     declarations to make the actual procs work.
+evalProcedure :: [Pat] -> Declaration -> Q ([Dec])
+evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
+    let p' = Procedure (Identifier (invert n)) vs (reverseBlock b)
+    (pDecl,  hs1) <- actualEvalProcedure globalArgs $ p
+    (pDecl', hs2) <- actualEvalProcedure globalArgs $ p'
+    return $ pDecl : pDecl' : hs1 ++ hs2
+
 -- Evaluate a procedure to it's corresponding TH representation
-evalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
-evalProcedure globalArgs (Procedure n vs b) = do
+actualEvalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
+actualEvalProcedure globalArgs (Procedure n vs b) = do
     let name = case n of 
                    (Identifier "main") -> nameId $ Identifier "hanus_main"
                    otherwise -> nameId n
-    let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
-    let pattern = TupP (globalArgs)
+    let inputArgs = map (\(Variable (Identifier n) t) -> SigP (VarP (mkName n)) t) vs
+    let pattern = TupP globalArgs
     body <- evalProcedureBody b (pattern, TupP (globalArgs ++ inputArgs))
     return (FunD name [Clause (globalArgs ++ inputArgs) (fst body) []], snd body)
 
 -- Evaluate a procedure to it's corresponding TH representation
-evalProcedure2 :: [Pat] -> Name -> [Variable] -> [Stmt] -> Q Dec
-evalProcedure2 globalArgs name vs stmts = do
-    let inputArgs = map (VarP . (\(Variable (Identifier n) _) -> mkName n)) vs
-    let pattern = TupP (globalArgs)
-    body <- evalProcedureBody2 stmts (pattern, TupP (globalArgs ++ inputArgs))
-    return $ FunD name [Clause (globalArgs ++ inputArgs) body []]
+-- This function is specifically used as a part of evalWhile.
+actualEvalProcedure' :: Name -> Pat -> [Stmt] -> Q Dec
+actualEvalProcedure' name scopeTup@(TupP scope) stmts = do
+    body <- evalProcedureBody' stmts scopeTup
+    return $ FunD name [Clause scope body []]
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
-evalProcedureBody2 :: [Stmt] -> Env -> Q Body
-evalProcedureBody2 stmts environment = do
+-- This function is specifically used as a part of evalWhile.
+evalProcedureBody' :: [Stmt] -> Pat -> Q Body
+evalProcedureBody' stmts entireScope = do
     return $ NormalB $ DoE $ stmts ++ [returnTup]
-        where returnTup = NoBindS $ tupP2tupE (fst environment)
+        where returnTup = NoBindS $ tupP2tupE entireScope
 
 -- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 evalProcedureBody :: [Statement] -> Env -> Q (Body, [Dec])
-evalProcedureBody ss environment = do
-    x <- foldM accResult (initR environment) ss
+evalProcedureBody ss env = do
+    x <- foldM accResult (initR env) ss
     return (NormalB $ DoE $ (frst x) ++ [returnTup], scnd x)
-        where returnTup = NoBindS $ tupP2tupE (fst environment)
+        where returnTup = NoBindS $ tupP2tupE (snd env)
 
 -- Evaluate a statement from a janus program to it's corresponding TH representation
 evalStatement :: Env -> Statement -> Q EvalState
 evalStatement env (Assignment direction op lhss expr) = evalAssignment env direction op lhss expr
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
+evalStatement env (Uncall (Identifier i) args)        = evalFunctionCall env (invert i) args
 evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
-evalStatement env (LocalVarDeclaration var i stmts e) = do
-  varPat <- varToPat var
-  evalLocalVarDec env varPat i stmts e
+evalStatement env (Log   lhss)                        = evalLog env lhss
+evalStatement env (LocalVarDeclaration var i stmts e) = evalLocalVarDec env var i stmts e
 evalStatement  _ _ = error "Statement not implementend"
+
+-- If input is ["x"] then output is [", ", "x", " : ", "<value_of_x>"]
+evalLogUpdate :: [LHS] -> [Exp]
+evalLogUpdate [] = []
+evalLogUpdate (x:xs) = do
+    let name       = lhsToString x
+    let nameExp    = LitE $ StringL name
+    let sepExp     = LitE $ StringL " : "
+    let commaExp   = LitE $ StringL ", "
+    let valExp     = AppE (toE "show") (toE name)
+    [commaExp, nameExp, sepExp, valExp] ++ evalLogUpdate xs
+        where lhsToString (LHSIdentifier (Identifier name)) = name
+
+-- Evaluates a "#log" statement.
+evalLog :: Env -> [LHS] -> Q EvalState
+evalLog env xs = do
+    throwLogExceptionIfNecessary
+    -- We take the tail because the first Exp is a separator.
+    let logUpdateStmts = ListE $ tail $ evalLogUpdate xs
+    tmpN <- newName "tmp"
+    let concatedList = (AppE (toE "concat") logUpdateStmts)
+    let zero = LitE $ IntegerL 0
+    let traceExp  = AppE (AppE (toE "trace") concatedList) zero
+    return ([letStmt (BangP $ VarP tmpN) traceExp], [], env)
+
+-- Throws an exception if the user has "#log" statements in their code, but
+-- has not imported Debug.Trace.
+throwLogExceptionIfNecessary :: Q ()
+throwLogExceptionIfNecessary = do
+    ModuleInfo mods <- thisModule >>= reifyModule
+    let canLog = any sDebugMod mods
+    if not canLog then
+        error "You need to add the Haskell line 'import Debug.Trace' at the top (outside the Oxford brackets) of the file in which you use the Hanus #log statement."
+    else
+        return ()
+        where sDebugMod (Module _ (ModName "Debug.Trace")) = True
+              sDebugMod _                                  = False
 
 -- Evaluate an assignment (as defined in AST.hs) to an equivalent TH representation. 
 -- Assignment in this context refers to any operation that changes the value of one 
@@ -148,7 +205,7 @@ evalAssignment env direction op lhss exp = do
     let vf = AppE op' f
     vNames <- replicateM (length lhss) (newName "v")
     let valuesP = (TupP . map VarP) vNames
-    let call = letStmt valuesP argsE
+    let call = letStmt valuesP (AppE (AppE vf argsE) exp)
     restores <- concatMapM restoreStmt (zip vNames lhss)
     return (call:restores, [], env)
     where argsE = (TupE . map argE) lhss
@@ -171,38 +228,26 @@ evalAssignment env direction op lhss exp = do
 
 -- Evaluate a janus procedure call to it's corresponding TH representation
 evalFunctionCall :: Env -> String -> [LHS] -> Q EvalState
-evalFunctionCall env name args = do
+evalFunctionCall env@(TupP globalsList, _) name args = do
     tmpN <- newName "tmp"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
-         ((VarE . mkName) name) (pattern' ++ (map (\(LHSIdentifier (Identifier n)) -> VarP (mkName n)) args))
-    return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
+         ((VarE . mkName) name) (pattern' ++ argsPats)
+    return ([letStmt (VarP tmpN) f, letStmt returnPat (VarE tmpN)], [], env)
     where pattern' = (unwrapTupleP (fst env))
-                                    
+          argsPats = map (\(LHSIdentifier (Identifier n)) -> VarP (mkName n)) args
+          returnPat = TupP (globalsList ++ argsPats)
 
-evalFunctionCallWithName :: Env -> Name -> [LHS] -> Q EvalState
-evalFunctionCallWithName env name args = do
+evalFunctionCallWithName :: Env -> Name -> Pat -> Q EvalState
+evalFunctionCallWithName env name (TupP args) = do
     tmpN <- newName "tmp"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
-         (VarE name) pattern'
-    x <- argsE
-    f' <- foldM (\x a -> return $ AppE x a) f x
-    return ([letStmt (VarP tmpN) f', letStmt (fst env) (VarE tmpN)], [], env)
-    where pattern' = (unwrapTupleP (fst env))
-          argsE = do
-            x <- mapM (\(LHSIdentifier (Identifier n)) -> argE (mkName n)) args
-            return x
-            where argE   n = do
-                    x <- argSet n
-                    return $ TupE [argGet n, x]
-                  argGet n = LamE [fst env] (VarE n)
-                  argSet n = do
-                      vName <- newName "v"
-                      return $ LamE [VarP vName, fst env]
-                          ((TupE . map VarE) $ replace n vName $ (map (\(VarP n) -> n) . unwrapTupleP) (fst env))
+         (VarE name)
+         args
+    return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
 
 -- Evaluate a janus 'if' statement to it's corresponding TH representation
 evalIf :: Env -> Exp -> [Statement] -> [Statement] -> Q EvalState
@@ -254,8 +299,7 @@ evalSingleBranchIf env g eb = do
 evalWhile :: Env -> Exp -> Exp -> [Statement] -> [Statement] -> Q EvalState
 evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatements = do
     whileProcName <- newName "while"
-
-    whileProcCall <- evalFunctionCallWithName env whileProcName [] -- the empty list here shouldn't be empty.
+    whileProcCall <- evalFunctionCallWithName (scope, scope) whileProcName scope -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
     err <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
     -- The err will be thrown in a do block that should return a value, so we actually
@@ -275,7 +319,7 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
     doStmts             <- evalStmts doStatements
     let whileProcBlock = doStmts ++ (frst whileProcDoIf)
 
-    whileProcDec      <- evalProcedure2 globals whileProcName [] whileProcBlock -- the empty list here shouldn't be empty.
+    whileProcDec      <- actualEvalProcedure' whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
 
     return (frst whileIf, [whileProcDec], env)
 
@@ -283,14 +327,37 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
               stmts <- foldM accResult (initR env) stmts
               return $ (frst stmts)
 
-evalLocalVarDec :: Env -> Pat -> Exp -> [Statement] -> Exp -> Q EvalState
-evalLocalVarDec env var init body exit = do
+evalLocalVarDec :: Env -> Variable -> Exp -> [Statement] -> Exp -> Q EvalState
+evalLocalVarDec env v@(Variable (Identifier varName) _) init body exit = do
+    varPat <- varToPat v
     tmpN <- newName "tmp"
-    let env' = (fst env, (TupP . (:) var. unwrapTupleP . snd) env)
+    let env' = (fst env, (TupP . (:) varPat. unwrapTupleP . snd) env)
     stmts <- foldM accResult (initR env') body
-    let body' = DoE ((frst stmts) ++ [(NoBindS (tupP2tupE $ snd env))])
-    let asg = LetE [ValD var (NormalB init) []] body'
-    return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], [], env)
+    doReturn <- localVarReturnStmt env varName exit
+    let body' = DoE ((frst stmts) ++ [doReturn])
+    let asg = LetE [ValD varPat (NormalB init) []] body'
+    return ([letStmt (VarP tmpN) asg, letStmt (snd env) (VarE tmpN)], scnd stmts, env)
+
+-- An if-then-else statement that returns the tuple with updated values, *IF*
+-- the local var has the value that the programmer stated at delocal. If they
+-- didn't, an error will be thrown.
+localVarReturnStmt :: Env -> String -> Exp -> Q Stmt
+localVarReturnStmt env varName exitCondition = do
+    e1     <- [|"Variable '"|]
+    let e2  = LitE $ StringL varName
+    e3     <- [|"' had the value '"|]
+    let e4  = AppE (toE "show") (toE varName)
+    e5     <- [|"' when it was delocalized, but it should have had the value '"|]
+    let e6  = AppE (toE "show") exitCondition
+    e7     <- [|"'."|]
+
+    let errMsg = AppE (toE "concat") (ListE [e1,e2,e3,e4,e5,e6,e7])
+    let guard  = AppE (AppE (toE "==") (toE varName)) exitCondition
+    let tb     = DoE [NoBindS (tupP2tupE $ snd env)]
+    let eb     = AppE (toE "error") errMsg
+
+    return $ NoBindS $ CondE guard tb eb    
+
 
 -- *** HELPERS *** ---
 
@@ -302,16 +369,20 @@ nameId (Identifier n) = mkName n
 varToPat :: Variable -> Q Pat
 varToPat (Variable n t) = do
     let name = nameId n
-    return $ VarP name
+    return $ SigP (VarP name) t
 
 -- Create a TH expression referencing a variable from a TH pattern referencing
 -- a variable
 expFromVarP :: Pat -> Q Exp
-expFromVarP (VarP name) = return (VarE name) 
+expFromVarP p = return $ pToE p
 
 -- Convert a TH tuple pattern to a TH tuple expression
 tupP2tupE :: Pat -> Exp
-tupP2tupE (TupP pats) = TupE $ map (\(VarP name) -> VarE name) pats
+tupP2tupE (TupP pats) = TupE $ map pToE pats
+
+pToE :: Pat -> Exp
+pToE (VarP name)          = VarE name
+pToE (SigP (VarP name) t) = SigE (VarE name) t
 
 unwrapTupleP :: Pat -> [Pat]
 unwrapTupleP (TupP xs) = xs
@@ -341,6 +412,12 @@ thrd (_, _, z) = z
 removeVar :: Pat -> Env -> Env
 removeVar var env = (fst env, TupP $ List.delete var $ (unwrapTupleP . snd) env)
 
+toE :: String -> Exp
+toE s = VarE (mkName s)
+
+toP :: String -> Pat
+toP s = VarP (mkName s)
+
 -- Enumerate all procedure declarations in a janus program
 getProcedures :: Program -> [Declaration]
 getProcedures (Program xs) = filter filterProcs xs
@@ -361,8 +438,5 @@ getVariableDecs (Program decs) = filter filterVars decs
                                 GlobalVarDeclaration _ -> True
                                 otherwise              -> False
 
--- Gets all the names of the global variables in the program
-variableNames :: Program -> [String]
-variableNames program = map varToName (getVariableDecs program)
-    where varToName (GlobalVarDeclaration (Variable (Identifier n) _)) = n
-
+-- The inverse of a procedure call proc_call_name is stored as proc_call_name'
+invert name = name ++ "'"

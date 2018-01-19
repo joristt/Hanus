@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes, AllowAmbiguousTypes #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes #-}
 
 module TestEval where
 
@@ -15,30 +15,44 @@ import StdLib.DefaultValue
 
 import qualified Data.List as List
 import qualified Data.Char as Char
+import qualified Data.Map as Map
+
+import Debug.Trace
 
 [hanusT|
-    xa :: Int;
-    xb :: Int;
 
-    procedure fib(n :: Int)
+    m :: Int;
+
+    procedure fib(n :: Int, xa :: Int, xb :: Int)
     {
         if n==0 then
             xa += 1;
             xb += 1;
         else
             n -= 1;
-            call fib n;
+            call fib n xa xb;
             xa += xb;
             swap xa xb;
         fi xa==xb;
     }
 
-procedure runfib(){local n :: Int = 100000;call fib n;delocal 4;}
+    procedure runfib()
+    {
+        local n  :: Int = 4;
+        local xa :: Int = 0;
+        local xb :: Int = 0;
+            #log n xa xb;
+            call fib n xa xb;
+            #log n xa xb;
+        delocal 8;
+        delocal 5;
+        delocal 0;
+    }
 
 |]
 
 [hanusT|
-    map :: Data.Map Int Int;
+    map :: Map.Map Int Int;
 
     procedure testmap()
     {
