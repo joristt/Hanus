@@ -9,6 +9,11 @@
 \usepackage[english]{babel}
 \usepackage{amsmath,amsthm,amssymb,latexsym}
 
+\usepackage{minted}
+%\usemintedstyle{friendly}
+\usemintedstyle{tango}
+%\usemintedstyle{monokai}
+
 \graphicspath{{figures/}} % Location of the graphics files
 
 \usecaptiontemplate{\small\structure{\insertcaptionname~\insertcaptionnumber: }\insertcaption} % A fix for figure numbering
@@ -27,7 +32,7 @@
 %	FOOTER TEXT
 %----------------------------------------------------------------------------------------
 
-\newcommand\leftfoot{https://github.com/joristt/Concepts-of-Program-Design-Practical} % Left footer text
+\newcommand\leftfoot{https://github.com/joristt/hanus} % Left footer text
 \newcommand\rightfoot{} % Right footer text
 
 %----------------------------------------------------------------------------------------
@@ -43,8 +48,9 @@
 %\usefonttheme[onlymath]{serif}
 %\setbeamercolor{block title}{fg=black,bg=orange!70} % Change the block title color
 
-
 %----------------------------------------------------------------------------------------
+\newcommand{\code}[1]{\inputminted[frame=lines,framesep=1cm,baselinestretch=.9,linenos,fontsize=\scriptsize]{haskell}{code/#1.hs}}
+\newcommand{\codeErr}[1]{\inputminted[frame=lines,framesep=1cm,baselinestretch=.9,fontsize=\scriptsize]{bash}{code/#1_err.hs}}
 
 \begin{document}
 
@@ -79,6 +85,16 @@
 \begin{block}{Syntactic Checking}
 	\begin{itemize}
 		\item By using \textit{QuasiQuotation}, we notify the programmer of possible syntactic errors at compile-time!
+	\center
+	\textsc{\small Code}\\ \vspace{1cm}
+	\begin{minipage}{.8\textwidth}
+	\code{syntax}
+	\end{minipage}
+	\vspace{1cm}
+	\item \textsc{\small Error}\\ \vspace{1cm}
+	\begin{minipage}{.8\textwidth}
+	\codeErr{syntax}
+	\end{minipage}	
 	\end{itemize}
 \end{block}
 
@@ -94,13 +110,33 @@
 
 \begin{block}{Semantic Checking (Janus side)}
 	\begin{itemize}
-		\item Invalid LHS error
+		\item We also report semantic errors, such as violating Janus-specific constraints for expressions.
+		\center
+		\textsc{\small Code}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\code{semJ}
+		\end{minipage}
+		\vspace{1cm}
+		\item \textsc{\small Error}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\codeErr{semJ}
+		\end{minipage}
 	\end{itemize}
 \end{block}
 
 \begin{block}{Semantic Checking (Haskell side)}
 	\begin{itemize}
-		\item No instance for .... error
+		\item Since we generate Haskell programs, users are also notified for error made in anti-quoted Haskell expressions.
+		\center
+		\textsc{\small Code}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\code{semH}
+		\end{minipage}
+		\vspace{1cm}
+		\item \textsc{\small Error}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\codeErr{semH}
+		\end{minipage}
 	\end{itemize}     
 \end{block}
 

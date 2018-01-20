@@ -31,8 +31,6 @@ cabal.project.local
 **.nav
 **.snm
 **.toc
-proposal/_minted-proposal/
 proposal/*.pdf
-intermediate/_minted-intermediate/
 intermediate/*.pdf
-
+**/_minted*/
