@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes, FlexibleContexts #-}
 
 module TestEval where
 
@@ -21,15 +21,16 @@ import Debug.Trace
 
 [hanusT|
 
-    hashmap :: Map.Map String Int;
+    a :: Array Int Int;
+    b :: Array String Int;
 
     procedure testmap()
     {
-        hashmap["foo"] += 10 :: Int;
-        hashmap["bar"] += 1  :: Int;
-        local x :: Int = (indexerGet hashmap "foo") :: Int;
-        hashmap["bar"] += x;
-        delocal 10;
+        a[0] += 10;
+        a[1] += 5;
+
+        b["foo"] += 1;
+        b["bar"] += 2;
     }
 
 |]

@@ -35,14 +35,13 @@ evalProgram :: Program -> Q [Dec]
 evalProgram p = do
     throwExceptionIfEvalImpossible
     let nameFwd = mkName "run"
-    nameBwd <- newName "run_bwd"
     -- generate program entry point ('run' function)
-    x  <- entry nameFwd nameBwd
+    x  <- entry nameFwd
     -- generate pattern for program state
     decs <- evalProgramT p
     return $ x:decs
     where -- generates the program entry point
-          entry fwd bwd = do
+          entry fwd = do
               fcall <- getMain globalVars
               binds <- vdecs
               stTup <- statePattern globalVars
@@ -61,7 +60,9 @@ evalProgramT p@(Program decls) = do
     throwExceptionIfEvalImpossible
     -- generate pattern for program state
     pt <- statePattern globalVars
-    concatMapM (evalProcedure pt) procedures
+    dc <- concatMapM (evalProcedure pt) procedures
+    --idxs <- getIndexers globalVars
+    return (dc)
     where procedures = getProcedures p
           globalVars = getVariableDecs p 
 
@@ -439,4 +440,5 @@ getVariableDecs (Program decs) = filter filterVars decs
                                 otherwise              -> False
 
 -- The inverse of a procedure call proc_call_name is stored as proc_call_name'
+invert :: String -> String
 invert name = name ++ "'"
