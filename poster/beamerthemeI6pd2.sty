@@ -25,7 +25,7 @@
 
 \setbeamercolor{headline}{fg=black,bg=yyellow}
 \setbeamercolor{footline}{fg=black, bg=yyellow}
-\setbeamerfont{footline}{size=\small,series=\tt}
+\setbeamerfont{footline}{size=\Large,series=\tt}
 \setbeamercolor{separation line}{bg=yyellow}
 \setbeamercolor{title in headline}{fg=darkblue}
 \setbeamercolor{author in headline}{fg=lightblue}
@@ -58,7 +58,7 @@
   \vskip.75ex
   \begin{beamercolorbox}[ht=3.5ex,dp=0.5ex,center,leftskip=-1em,colsep*=.75ex]{block title}%
     \usebeamerfont*{block title}%
-    {\phantom{Gg}\insertblocktitle}% phantom because of baseline problem
+    {\phantom{Gg}\textsc{\insertblocktitle}}% phantom because of baseline problem
   \end{beamercolorbox}%
   {\ifbeamercolorempty[bg]{block body}{}{\nointerlineskip\vskip-0.5pt}}%
   \usebeamerfont{block body}%
@@ -124,7 +124,7 @@
   \end{beamercolorbox}
   
   \leavevmode%
-  \begin{beamercolorbox}[ht=4ex,leftskip=1em,rightskip=1em]{author in head/foot}%
+  \begin{beamercolorbox}[ht=\footsize,leftskip=1em,rightskip=1em]{author in head/foot}%
     \texttt{\leftfoot}
     \hfill
     \texttt{\rightfoot}
@@ -151,9 +151,9 @@
 % or define your own template using \defbeamertemplate{itemize item}, see beameruserguide.pdf
 
 % equal font sizes for all levels
-\setbeamerfont{itemize/enumerate body}{size=\normalsize}
-\setbeamerfont{itemize/enumerate subbody}{size=\normalsize}
-\setbeamerfont{itemize/enumerate subsubbody}{size=\normalsize}
+\setbeamerfont{itemize/enumerate body}{size=\footnotesize}
+\setbeamerfont{itemize/enumerate subbody}{size=\footnotesize}
+\setbeamerfont{itemize/enumerate subsubbody}{size=\footnotesize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Local Variables: 
