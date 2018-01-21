@@ -1,5 +1,5 @@
 [hanus|
-procedure reverse_divide(x :: Int, y :: Int, z :: Int){
+procedure divide'(x :: Int, y :: Int, z :: Int){
     from x < y loop
         x += y;
         z -= 1;
