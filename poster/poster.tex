@@ -142,7 +142,21 @@
 
 \begin{block}{Haskell Power}
 	\begin{itemize}
-		\item Functor example
+		\item The programmer can add additional operators by defining functions for forward and backward execution.
+		\item We can define an operator that works on all Functors:
+		\begin{center}
+		\textsc{\small Definition}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+			\code{functor_def}
+		\end{minipage}
+		\vspace{1cm}
+		\item \textsc{\small Usage}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+			\code{functor_usage}
+		\end{minipage}
+		\end{center}
+		\vspace{1cm}
+		\item Besides operators, the programmer can also define field and array indexers which allow you to use \texttt{tree.leftChild} and \texttt{array[x]} on the left hand side.
 	\end{itemize}
 \end{block}
 
