@@ -33,11 +33,8 @@ hanusT = QuasiQuoter {
     , quotePat = undefined
     , quoteType = undefined
     , quoteDec  = \prog-> do
-        runIO $ putStrLn "Started quoting"
         p <- runQQParserT prog
-        runIO $ putStrLn  $ "parsing result: " ++ (show p)
         r <- evalProgramT p
-        runIO $ putStrLn $ pprint r
         return r
     }
 

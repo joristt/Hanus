@@ -21,41 +21,18 @@ import Debug.Trace
 
 [hanusT|
 
-    m :: Int;
-
-    procedure fib(n :: Int, xa :: Int, xb :: Int)
-    {
-        if n==0 then
-            xa += 1;
-            xb += 1;
-        else
-            n -= 1;
-            call fib n xa xb;
-            xa += xb;
-            swap xa xb;
-        fi xa==xb;
-    }
-
-    procedure runfib()
-    {
-        local n  :: Int = 4;
-        local xa :: Int = 0;
-        local xb :: Int = 0;
-            #log n xa xb;
-            call fib n xa xb;
-            #log n xa xb;
-        delocal 8;
-        delocal 5;
-        delocal 0;
-    }
-
-|]
-
-[hanusT|
-    map :: Map.Map Int Int;
+    hashmap :: Map.Map String Int;
 
     procedure testmap()
     {
-        map[0] += 10;
+        hashmap["foo"] += 10 :: Int;
+        hashmap["bar"] += 1  :: Int;
+        local x :: Int = (indexerGet hashmap "foo") :: Int;
+        hashmap["bar"] += x;
+        delocal 10;
     }
+
 |]
+
+
+
