@@ -3,7 +3,7 @@
 %----------------------------------------------------------------------------------------
 
 \documentclass[final,hyperref={pdfpagelabels=false}]{beamer}
-\usepackage[orientation=portrait,size=a0,scale=1.8]{beamerposter}
+\usepackage[orientation=portrait,size=a0,scale=1.60]{beamerposter}
 \usetheme{I6pd2} % Use the I6pd2 theme supplied with this template
 
 \usepackage[english]{babel}
@@ -77,9 +77,28 @@
 
 \begin{block}{Reverse your program}
 	\begin{itemize}
-		\item Division example
-		\item Show inverse side-by-side
+
+		\item The inverse of a program can be computed automatically.
+		\center
+		\textsc{\small Division}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\code{divide}
+		\end{minipage}
+		\vspace{1cm}
+		\item \textsc{\small Reverse of division}\\ 			\textsc{\tiny{automatically computed}} \\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\code{divide_reverse}
+		\end{minipage}
 	\end{itemize}
+	\begin{itemize}
+\item Procedures are called with either the \textit{call} or the \textit{uncall} keyword. The \textit{main} procedure is called automatically. 	
+		\item
+		\center
+		\textsc{\small Execution}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+		\code{call_uncall}
+		\end{minipage}
+		\end{itemize}
 \end{block}
 
 \begin{block}{Syntactic Checking}
