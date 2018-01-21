@@ -7,6 +7,7 @@ import ReverseAST
 import StdLib.Operator
 import StdLib.DefaultValue
 import StdLib.ArrayIndexer
+import StdLib.FieldIndexer
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
@@ -155,7 +156,6 @@ evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
 evalStatement env (Log   lhss)                        = evalLog env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = evalLocalVarDec env var i stmts e
-evalStatement  _ _ = error "Statement not implementend"
 
 -- If input is ["x"] then output is [", ", "x", " : ", "<value_of_x>"]
 evalLogUpdate :: [LHS] -> [Exp]
@@ -206,25 +206,40 @@ evalAssignment env direction op lhss exp = do
     let vf = AppE op' f
     vNames <- replicateM (length lhss) (newName "v")
     let valuesP = (TupP . map VarP) vNames
-    let call = letStmt valuesP (AppE (AppE vf argsE) exp)
+    x <- argsE lhss
+    let call = letStmt valuesP (AppE (AppE vf x) exp)
     restores <- concatMapM restoreStmt (zip vNames lhss)
     return (call:restores, [], env)
-    where argsE = (TupE . map argE) lhss
+    where argsE lst = do 
+            x <- mapM argE lst
+            return $ TupE x
           argE lhs = case lhs of
-                       (LHSIdentifier ident) -> VarE $ nameId ident
-                       (LHSArray lhs exp)    -> 
-                         AppE (AppE ((VarE . mkName) "indexerGet") (argE lhs)) exp
-                       (LHSField _ _) -> undefined
+                       (LHSIdentifier ident) -> return $ VarE $ nameId ident
+                       (LHSArray lhs exp)    -> do
+                         x <- argE lhs
+                         return $ AppE (AppE ((VarE . mkName) "indexerGet") x) exp
+                       (LHSField obj field)  -> do 
+                         get <- [|(\(FieldIndexer g _) -> g)|]
+                         let fi = AppE get (VarE $ nameId field)
+                         x <- argE obj;
+                         return $ AppE fi x 
           restoreStmt (vname, lhs) = 
             case lhs of 
               (LHSIdentifier ident) -> return $ [letStmt (VarP $ nameId ident) (VarE vname)]
               (LHSArray lhs exp)    -> do
                 tmpN <- newName "tmp"
-                let res = letStmt (VarP tmpN) (AppE (AppE (AppE ((VarE . mkName) "indexerSet") (argE lhs)) exp) (VarE vname))
+                x <- argE lhs
+                let res = letStmt (VarP tmpN) (AppE (AppE (AppE ((VarE . mkName) "indexerSet") x) exp) (VarE vname))
+                return [res, letStmt (lhsP lhs) (VarE tmpN)]
+              (LHSField obj field) -> do
+                set <- [|(\(FieldIndexer _ s) -> s)|]
+                tmpN <- newName "tmp"
+                x <- argE obj
+                let res = letStmt (VarP tmpN) (AppE (AppE (AppE set (VarE $ nameId field)) x) (VarE vname))
                 return [res, letStmt (lhsP lhs) (VarE tmpN)]
           lhsP lhs = case lhs of
                        (LHSIdentifier ident) -> VarP $ nameId ident
-                       otherwise             -> undefined
+                       (LHSField obj _)  -> lhsP obj
 
 
 -- Evaluate a janus procedure call to it's corresponding TH representation

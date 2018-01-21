@@ -11,6 +11,7 @@ import StdLib.Operator
 import QQ
 import StdLib.Operator
 import StdLib.ArrayIndexer
+import StdLib.FieldIndexer
 import StdLib.DefaultValue
 
 import qualified Data.List as List
@@ -33,6 +34,16 @@ import Debug.Trace
         b["bar"] += 2;
     }
 
+|]
+
+[hanusT|
+    t :: (Int, Int);
+
+    procedure testtuple()
+    {
+        t.first += 10;
+        t.second += 100;
+    }
 |]
 
 
