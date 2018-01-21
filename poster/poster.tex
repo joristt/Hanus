@@ -124,25 +124,39 @@
 	\end{itemize}
 \end{block}
 
-\begin{block}{Semantic Checking (Haskell side)}
-	\begin{itemize}
-		\item Since regular Haskell programs are generated, users also get error messages for \textit{anti-quoted} Haskell expressions.
-		\center
-		\textsc{\small Code}\\ \vspace{1cm}
-		\begin{minipage}{.8\textwidth}
-		\code{semH}
-		\end{minipage}
-		\vspace{1cm}
-		\item \textsc{\small Error}\\ \vspace{1cm}
-		\begin{minipage}{.8\textwidth}
-		\codeErr{semH}
-		\end{minipage}
-	\end{itemize}     
-\end{block}
+%\begin{block}{Semantic Checking (Haskell side)}
+%	\begin{itemize}
+%		\item Since regular Haskell programs are generated, users also get error messages for \textit{anti-quoted} Haskell expressions.
+%		\center
+%		\textsc{\small Code}\\ \vspace{1cm}
+%		\begin{minipage}{.8\textwidth}
+%		\code{semH}
+%		\end{minipage}
+%		\vspace{1cm}
+%		\item \textsc{\small Error}\\ \vspace{1cm}
+%		\begin{minipage}{.8\textwidth}
+%		\codeErr{semH}
+%		\end{minipage}
+%	\end{itemize}     
+%\end{block}
 
 \begin{block}{Haskell Power}
 	\begin{itemize}
-		\item Functor example
+		\item The programmer can add additional operators by defining functions for forward and backward execution.
+		\item We can define an operator that works on all Functors:
+		\begin{center}
+		\textsc{\small Definition}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+			\code{functor_def}
+		\end{minipage}
+		\vspace{1cm}
+		\item \textsc{\small Usage}\\ \vspace{1cm}
+		\begin{minipage}{.8\textwidth}
+			\code{functor_usage}
+		\end{minipage}
+		\end{center}
+		\vspace{1cm}
+		\item Besides operators, the programmer can also define field and array indexers which allow you to use \texttt{tree.leftChild} and \texttt{array[x]} on the left hand side.
 	\end{itemize}
 \end{block}
 
