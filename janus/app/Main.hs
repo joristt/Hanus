@@ -1,7 +1,11 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
+import Parser.JanusParser
 
 import Parser.JanusParser
 

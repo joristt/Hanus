@@ -21,7 +21,7 @@ type Block = [Statement]
 data Statement
   -- x y s= exp
   -- pop x y
-  = Assignment String [LHS] Exp
+  = Assignment Bool String [LHS] Exp
   -- call name x y
   | Call Identifier [LHS]
   -- uncall name x y
@@ -41,6 +41,9 @@ data Statement
   --   block
   -- delocal expr;
   | LocalVarDeclaration Variable Exp Block Exp
+  -- #log expr1 expr2 ...;
+  -- This prints the exprs in format "expr1name : expr1value, expr2name : expr2value" etc...
+  | Log [LHS]
 
 {-
 Examples:
@@ -72,7 +75,7 @@ instance Show LHS where
   show (LHSField lhs identifier) = show lhs ++ "." ++ show identifier
 
 instance Show Statement where
-  show (Assignment operator lhs exp ) = unwords (map show lhs) ++ " " ++ operator ++ " " ++ show exp
+  show (Assignment toReverse operator lhs exp ) = intercalate ", " (map show lhs) ++ (if toReverse then "~" else "") ++ operator ++ show exp
   show (Call identifier lhs) = "call " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (Uncall identifier lhs) = "uncall " ++ show identifier ++ " " ++ unwords (map show lhs)
   show (If pre s1 s2 post) = "if " ++ show pre ++ " then\n"
@@ -88,6 +91,7 @@ instance Show Statement where
   show (LocalVarDeclaration v init block exp) = "local " ++ show v ++ " = " ++ show init ++ ";\n"
     ++ indent (unlines $ map show block)
     ++ "delocal " ++ show exp ++ ";"
+  show (Log lhs) = intercalate ", " $ map show lhs
 
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
