@@ -1,8 +1,9 @@
 module SemanticChecker (extractVarsE, semanticCheck) where
 
-import AST
-import Data.List (nub, (\\))
-import Language.Haskell.TH.Syntax
+import           AST
+import           Data.List                  (nub, (\\))
+import           Language.Haskell.TH.Syntax
+
 
 semanticCheck :: Program -> Bool
 semanticCheck prog =
@@ -14,8 +15,8 @@ mainExists (Program decls) =
   any checkMain decls
   where
     checkMain :: Declaration -> Bool
-    checkMain (Procedure (Identifier "main") [] _) = True
-    checkMain _                                    = False
+    checkMain (Procedure (Identifier "main") _ _) = True
+    checkMain _                                   = False
 
 -- | Check that variables on the LHS does not appear on the RHS.
 rhsCheck :: Program -> Bool

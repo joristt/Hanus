@@ -3,11 +3,10 @@ module Main where
 import Options.Applicative
 import Data.Semigroup ((<>))
 
+import Parser.JanusParser
+
 -- | Command-line options.
-data Options = Options
-  { inputFile :: String
-  , intOpt    :: Int
-  }
+newtype Options = Options { inputFile :: String }
 
 -- | Parsing of command-line options.
 parseOptions :: Parser Options
@@ -18,22 +17,14 @@ parseOptions = Options
       <> metavar "STRING"
       <> help "Janus source file"
       )
-  <*> option auto
-      (  long "dummy-int"
-      <> showDefault
-      <> value 1
-      <> metavar "INT"
-      <> help "Dummy integer argument"
-      )
-
-withInfo :: Parser a -> String -> ParserInfo a
-withInfo opts desc = info (helper <*> opts) $ progDesc desc
 
 -- | Main.
 main :: IO ()
 main = run =<< execParser (parseOptions `withInfo` "Janus DSL")
-
--- | Run.
-run :: Options -> IO ()
-run (Options inputFile dummyInt) = do
-  putStrLn ""
+  where
+    withInfo :: Parser a -> String -> ParserInfo a
+    withInfo opts desc = info (helper <*> opts) $ progDesc desc
+    run :: Options -> IO ()
+    run (Options inputFile) = do
+      prog <- readFile inputFile
+      print $ parser "" 0 0 prog
