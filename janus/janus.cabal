@@ -46,6 +46,7 @@ test-suite janus-test
   other-modules:       TQQ
                      , TSemanticChecker
                      , TEval
+                     , TParser
   build-depends:       base
                      , janus
                      , test-framework

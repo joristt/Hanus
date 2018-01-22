@@ -21,15 +21,16 @@ cabal.project.local
 .HTF/
 **.stylish-haskell.yaml
 # Latex
-*.aux
-*.log
-*.out
-*.gz
-*.bbl
-*.blg
+**.aux
+**.log
+**.out
+**.gz
+**.bbl
+**.blg
 **.dvi
-proposal/_minted-proposal/
+**.nav
+**.snm
+**.toc
 proposal/*.pdf
-intermediate/_minted-intermediate/
 intermediate/*.pdf
-
+**/_minted*/
