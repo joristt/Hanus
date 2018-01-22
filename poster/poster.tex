@@ -1,0 +1,181 @@
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[final,hyperref={pdfpagelabels=false}]{beamer}
+\usepackage[orientation=portrait,size=a0,scale=1.7]{beamerposter}
+\usetheme{I6pd2} % Use the I6pd2 theme supplied with this template
+
+\usepackage[english]{babel}
+\usepackage{amsmath,amsthm,amssymb,latexsym}
+
+\usepackage{minted}
+%\usemintedstyle{friendly}
+\usemintedstyle{tango}
+%\usemintedstyle{monokai}
+
+\graphicspath{{figures/}} % Location of the graphics files
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\title{\LARGE \textsc{Hanus: Embedding Janus in Haskell}} % Poster title
+
+\author{\vspace{1cm} Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff,\\ Cas van der Rest, Orestis Melkonian\vspace{1cm}} % Authors
+
+\institute{\Large \emph{Faculty of Science, Utrecht University}} % Institution
+
+%----------------------------------------------------------------------------------------
+%	FOOTER TEXT
+%----------------------------------------------------------------------------------------
+
+\newcommand\footsize{10ex}
+\newcommand\leftfoot{
+	\begin{minipage}{.5\textwidth}
+	\includegraphics[scale=2.3]{uulogo.pdf}
+	\end{minipage}
+	\vspace{.2cm}
+} % Left footer text
+\newcommand\rightfoot{
+	\begin{minipage}{.5\textwidth}
+	\vspace{1cm}
+	\large \textbf{https://github.com/joristt/hanus}
+	\end{minipage}
+
+%	\vspace{1cm}
+} % Right footer text
+
+%----------------------------------------------------------------------------------------
+%	SIZES ( 3*sepsize + 2*colsize == 1 )
+%----------------------------------------------------------------------------------------
+\newcommand\sepsize{.05\textwidth}
+\newcommand\colsize{.425\textwidth}
+
+%----------------------------------------------------------------------------------------
+%	STYLING
+%----------------------------------------------------------------------------------------
+\usepackage{times}\usefonttheme{professionalfonts}
+
+%----------------------------------------------------------------------------------------
+\newcommand{\code}[2]{
+	\begin{center}
+		\vspace{.5cm}
+		\textsc{\small #1}\\
+		\vspace{.5cm}
+	\end{center}
+	\begin{minipage}{.9\textwidth}
+		\inputminted[frame=lines,framesep=1cm,baselinestretch=.8,linenos,fontsize=\footnotesize]
+			{haskell}{code/#2.hs}
+	\end{minipage}
+}
+\newcommand{\codeErr}[1]{
+	\begin{center}
+		\vspace{.5cm}
+		\textsc{\small Error}\\
+		\vspace{.5cm}
+	\end{center}
+	\begin{minipage}{.9\textwidth}
+		\inputminted[frame=lines,framesep=1cm,baselinestretch=.8,fontsize=\footnotesize]
+			{bash}{code/#1_err.hs}
+	\end{minipage}
+}
+
+\begin{document}
+
+\addtobeamertemplate{block end}{}{\vspace*{4ex}} % White space under blocks
+
+\begin{frame}[t] % The whole poster is enclosed in one beamer frame
+
+\begin{columns}[t] % The whole poster consists of two major columns, each of which can be subdivided further with another \begin{columns} block - the [t] argument aligns each column's content to the top
+
+\begin{column}{\sepsize}\end{column} % Empty spacer column
+
+\begin{column}{\colsize} % The first column
+
+%----------------------------------------------------------------------------------------
+%	CONTENT
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Introduction}
+	\begin{itemize}
+		\item \textbf{Janus} is an imperative reversible programming language, meaning that every computation and function can be reversed.
+		\vspace{1cm}
+ 		\item \textbf{Hanus} is an extended implementation of Janus that can be compiled straight to Haskell. Because of this, Hanus contains many awesome Haskell features that are unthinkable in regular Janus!
+	\end{itemize}
+\end{block}
+
+\begin{block}{Reverse your program}
+	\begin{itemize}
+	\item The inverse of a program can be computed automatically.
+		\code{Division}{divide}
+		\vspace{1cm}
+		\code{Reverse of division}{divide_reverse}
+	\vspace{1cm}
+	\item Procedures are called with either the \textit{call} or the \textit{uncall} keyword. The \textit{main} procedure is called automatically.
+		\code{Execution}{call_uncall}
+	\end{itemize}
+\end{block}
+
+\begin{block}{Syntactic Checking}
+	\begin{itemize}
+	\item By using \textit{QuasiQuotation}, the programmer gets notified of syntactic errors at compile-time!
+		\vspace{-.35cm}
+		\code{Code}{syntax}
+		\vspace{1cm}
+		\codeErr{syntax}
+	\end{itemize}
+\end{block}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of the first column
+
+\begin{column}{\sepsize}\end{column} % Empty spacer column
+
+\begin{column}{\colsize} % The second column
+\addtobeamertemplate{block end}{}{\vspace*{-2.4ex}} % White space under blocks
+
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Semantic Checking (Janus side)}
+	\begin{itemize}
+	\item \textit{Hanus} also reports semantic errors, such as violating Janus-specific constraints for expressions.
+		\code{Code}{semJ}
+		\vspace{1cm}
+		\codeErr{semJ}
+	\end{itemize}
+\end{block}
+
+\begin{block}{Semantic Checking (Haskell side)}
+	\begin{itemize}
+	\item Since regular Haskell programs are generated, users also get error messages for \textit{anti-quoted} Haskell expressions.
+		\code{Code}{semH}
+		\vspace{1cm}
+		\codeErr{semH}
+	\end{itemize}
+\end{block}
+
+\begin{block}{Haskell Power}
+	\begin{itemize}
+	\item The programmer can add additional operators by defining functions for forward and backward execution.
+	\item We can define an operator that works on all Functors:
+		\code{Definition}{functor_def}
+		\vspace{1cm}
+		\code{Usage}{functor_usage}
+		\vspace{1cm}
+	\item Besides operators, the programmer can also define field and array indexers which allow you to use \texttt{tree.leftChild} and \texttt{array[x]} on the left hand side.
+	\end{itemize}
+\end{block}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of the second column
+
+\begin{column}{\sepsize}\end{column} % Empty spacer column
+
+\end{columns} % End of all the columns in the poster
+
+\end{frame} % End of the enclosing frame
+
+\end{document}

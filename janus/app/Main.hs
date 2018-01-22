@@ -7,6 +7,8 @@ import Options.Applicative
 import Data.Semigroup ((<>))
 import Parser.JanusParser
 
+import Parser.JanusParser
+
 -- | Command-line options.
 newtype Options = Options { inputFile :: String }
 

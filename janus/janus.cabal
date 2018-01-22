@@ -46,6 +46,7 @@ test-suite janus-test
   main-is:             Spec.hs
   other-modules:       TQQ
                      , TSemanticChecker
+                     , TParser
   build-depends:       base
                      , janus
                      , test-framework

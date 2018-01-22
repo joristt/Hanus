@@ -18,10 +18,10 @@ import Debug.Trace
 
 main = defaultMain
   [ constructTestSuite testName testSuite
-  | (testName, testSuite) <- [ ("PRS", parserTests)
-                             , ("VAR", varTests)
-                             , ("SEM", semanticTests)
-                             , ("QQ",  qqTests)
+  | (testName, testSuite) <- [ ("PARSER", parserTests)
+                             , ("VARIABLE_EXTRACTION", varTests)
+                             , ("SEMANTIC_CHECKING", semanticTests)
+                             , ("QUASI_QUOTATION",  qqTests)
                              ]
   ]
 

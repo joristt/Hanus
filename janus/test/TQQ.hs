@@ -1,4 +1,5 @@
 {-# LANGUAGE QuasiQuotes, ScopedTypeVariables #-}
+
 module TQQ where
 
 import Test.Framework.Providers.HUnit
