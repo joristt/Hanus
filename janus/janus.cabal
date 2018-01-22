@@ -21,6 +21,7 @@ library
                      , Parser.HaskellParser
                      , SemanticChecker
                      , Eval
+                     , ReverseAST
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , optparse-applicative
@@ -45,7 +46,6 @@ test-suite janus-test
   main-is:             Spec.hs
   other-modules:       TQQ
                      , TSemanticChecker
-                     , TEval
   build-depends:       base
                      , janus
                      , test-framework

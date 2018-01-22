@@ -22,10 +22,8 @@ import StdLib.Operator
     }
 |]
 
-[hanusTF|examples/test1.janus|]
-
 -- | Assert that the quasiquoter is working properly
 qqTests =
   [ run @?= (1,2,3)
-    runtest @?= (1,2,3)
+  , runtest 0 0 0 @?= (1,2,3)
   ]

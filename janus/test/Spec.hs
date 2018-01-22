@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes, ScopedTypeVariables #-}
+
 import Test.Framework (defaultMain, testGroup)
 import Test.Framework.Providers.HUnit
 import Test.HUnit
@@ -10,6 +12,8 @@ import AST
 import Parser.JanusParser
 import SemanticChecker (extractVarsE, semanticCheck)
 
+import TQQ
+
 import Debug.Trace
 
 main = defaultMain
@@ -17,8 +21,7 @@ main = defaultMain
   | (testName, testSuite) <- [ ("PRS", parserTests)
                              , ("VAR", varTests)
                              , ("SEM", semanticTests)
-                             , ("QQ", qqTests)
-                             , ("EVAL", evalTests)
+                             , ("QQ",  qqTests)
                              ]
   ]
 
@@ -47,8 +50,8 @@ infix 1 @~>
   where eVars = extractVarsE (unsafePerformIO $ runQ e)
 
 data TestRec = TestRec { x :: Int, y :: Int -> Int }
-varTests =
-  [ [| x + y |] @~> ["x", "+", "y"]
+varTests = [
+    [| x + y |] @~> ["x", "+", "y"]
   , [| foo x y |] @~> ["foo", "x", "y"]
   , [| \x -> x + (y + 1) |] @~> ["+", "y"]
   , [| map (+ x) [y] |] @~> ["map", "+", "x", "y"]
