@@ -11,6 +11,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     AST
+                     , QQ
                      , StdLib.ArrayIndexer
                      , StdLib.DefaultValue
                      , StdLib.FieldIndexer
@@ -21,6 +22,8 @@ library
                      , Parser.JanusParser
                      , Parser.HaskellParser
                      , SemanticChecker
+                     , Eval
+                     , ReverseAST
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , optparse-applicative
@@ -43,6 +46,9 @@ test-suite janus-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       TQQ
+                     , TSemanticChecker
+                     , TParser
   build-depends:       base
                      , janus
                      , test-framework

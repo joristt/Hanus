@@ -1,0 +1,12 @@
+n :: Int;
+
+procedure f()
+{
+    n -= 1;
+}
+
+procedure callfunction()
+{
+    n += 4;
+    call f;
+}

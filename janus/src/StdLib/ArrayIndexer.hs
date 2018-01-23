@@ -1,5 +1,5 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, InstanceSigs #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies #-}
 
 module StdLib.ArrayIndexer where
 
@@ -8,7 +8,9 @@ import StdLib.DefaultValue
 import Data.Maybe
 import qualified Data.Map.Strict as M
 
-class ArrayIndexer a b c where
+type Array k v = M.Map k v
+
+class ArrayIndexer a b c | a -> b c where
   indexerGet :: a -> b -> c
   indexerSet :: a -> b -> c -> a
 
