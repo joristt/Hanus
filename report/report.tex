@@ -7,6 +7,7 @@
 \usepackage{multirow}
 \usepackage{csquotes}
 \usepackage{fullpage}
+\usepackage{hyperref}
 
 % Colors
 \usepackage{xcolor, color, colortbl}
@@ -26,6 +27,7 @@
 \newcommand{\site}[1]{\footnote{\url{#1}}}
 \newcommand{\inlinecode}[1]{\mintinline{bash}{#1}}
 
+
 \begin{document}
 \maketitle
 
@@ -37,12 +39,48 @@
 	\subsection{Planning}
 \section{Results}
 	\subsection{Achievements}
+		\subsubsection{Eval}
+			An important part of Hanus is the eval module. Eval is responsible for the actual Hanus compilation: it takes a Hanus AST and compiles it to Haskell. In this section, the chosen compilation tactic for some of the more important or interesting types of the Hanus AST will be discussed.
+			
+			\leavevmode\newline\textbf{Declarations}\newline
+				There are two types of declarations in a Hanus program:
+				\begin{enumerate}
+					\item
+						\underline{Global variable declarations}. These will be explained in more detail later on in this section. 
+					\item
+						\underline{Procedure declarations}. Procedures are compiled in Haskell to functions that consist of a do statement, since do statements come closest to the imperative nature of a Hanus procedure in terms of structure. The do block consists 
+				\end{enumerate}
+			
+			\leavevmode\newline\textbf{Variables}\newline
+			Variables can be declared in Hanus in two different ways.
+			\begin{enumerate}
+				\item
+					Globally. In this case, a variable is declared at the top level with a name and type. The programmer cannot explicitly give it an initial value, instead it will get the default value for that type implicitly. Global variables, as their name suggests, can automatically be used anywhere in the program, i.e. they don't have to be passed around. Because of this, Hanus makes it flat out \emph{impossible} to pass global values around as function arguments.
+				\item
+					Locally. Local Hanus variables are declared as follows:
+					\begin{minted}{haskell}
+local <varname> :: <vartype> = <initial_value>;
+	codeblock in which the local variable can be used and updated.
+unlocal <final_value>;
+					\end{minted}
+					By the time the unlocal statement is being executed, the local variable should have the specified final value. Note however, that the final value can also be a non-literal expression. The unlocal block is there to function as initial value for the local variable if the procedure it is part of is being uncalled, i.e. reversed: in that case, the local variable needs what is usually its final value as its initial value, and vice versa. An unlocal block is implemented as a \inlinecode{let-in} Haskell statement, because this automatically takes care of removing a local variable from scope after the unlocal line.
+					
+			\end{enumerate}
+				
+%				Procedures can take zero or more input arguments, but do not have a return type. Furthermore, the input arguments can only be local variables, since there is no point in explicitly passing a 
+%				 Instead, all input arguments are passed to the procedue by reference.
+			
+			
+			 Every Hanus procedure $p$ is compiled to two Haskell functions: a function $p$ that does exactly what Hanus procedure $p$ should do, and a function $p'$ that is the inverse of $p$.
+	
 	\subsection{Goal/planning adjustments}
 \section{Reflection}
 	\subsection{Good/bad surprises}
 	\subsection{Problems along the way}
+	
 \section{Appendix}
 	\subsection{Repo link}
+	The public repository can be found at \url{https://github.com/joristt/Hanus}.
 	\subsection{Code navigation}
 
 \newpage
