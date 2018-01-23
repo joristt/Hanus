@@ -79,7 +79,7 @@ pNonEmptyArgumentList = addLength 10 (do
 
 pName :: Parser String
 pName = addLength 1 (do
-    name <- (:) <$> pSatisfy validChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
+    name <- (:) <$> pSatisfy validInitChar (Insertion "identifier" 'a' 1) <*> pMunch validChar
     if name `elem` keywords then do
         pSatisfy (== 'a') (Insertion "identifier" 'a' 1)
         return $ name ++ "a"
@@ -87,7 +87,10 @@ pName = addLength 1 (do
         return name
   )
   where
-    validChar t = 'a' <= t && t <= 'z'
+    validInitChar t = ('a' <= t && t <= 'z') || ('A' <= t && t <= 'Z') || t == '_'
+    validChar t = validInitChar t || digit
+      where
+        digit = '0' <= t && t <= '9'
 
 pIdentifier :: Parser Identifier
 pIdentifier = Identifier <$> pName
@@ -126,12 +129,15 @@ pLog = Log <$ pToken "#log" <* pSpaces <*> pSomeLHS <* pToken ";" <* pSpaces
 
 pOperator :: Parser String
 pOperator =
-    (:) <$> pSatisfy (`elem` firstChar) (Insertion "Operator" (head firstChar) 1) <*> pMunch (`elem` validChars)
+    (:) <$> pSatisfy firstChar (Insertion "Operator" '+' 1) <*> pMunch validChar
     <|> pSym '`' *> pName <* pSym '`'
   where
     -- ':' cannot be the first char as it can only be used for constructor operators
-    validChars = ':' : firstChar
-    firstChar = "!#$%&*+./<=>?@\\^|-~"
+    validChar ':' = True
+    validChar t = firstChar t
+    firstChar t = t `elem` "!#$%&*+./<=>?@\\^|-~" || isEmoji t
+    isEmoji :: Char -> Bool
+    isEmoji c = c >= '\x1F000' && c <= '\x1F9FF'
 
 pSomeLHS :: Parser [LHS]
 pSomeLHS = (:) <$> pLHS <*> (
