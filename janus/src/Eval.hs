@@ -62,6 +62,7 @@ evalProgramT p@(Program decls) = do
     -- generate pattern for program state
     pt <- statePattern globalVars
     dc <- concatMapM (evalProcedure pt) procedures
+
     --idxs <- getIndexers globalVars
     return (dc)
     where procedures = getProcedures p
@@ -115,7 +116,9 @@ evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
     (pDecl', hs2) <- actualEvalProcedure globalArgs $ p'
     return $ pDecl : pDecl' : hs1 ++ hs2
 
--- Evaluate a procedure to it's corresponding TH representation
+-- Evaluate a procedure to it's corresponding TH representation, and return that 
+-- TH declaration plus (optionally) a list with one or more Dec's that are called
+-- by the procedure we're actually evaluating.
 actualEvalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
 actualEvalProcedure globalArgs (Procedure n vs b) = do
     let name = case n of 
