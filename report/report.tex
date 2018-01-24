@@ -18,6 +18,15 @@
 \definecolor{linkcolour}{rgb}{0,0.2,0.6}
 \hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
 
+\usepackage{titlesec}
+
+\setcounter{secnumdepth}{4}
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
 \title{\textbf{Project Report \\ \small{Concepts of Program Design}}}
 \author{\small{Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, Orestis Melkonian}}
 \date{}
@@ -37,6 +46,42 @@
 	\subsection{Planning}
 \section{Results}
 	\subsection{Achievements}
+	
+	
+	
+	\subsubsection{Semantics of operators}	
+	In Hanus, a user is able to define their own types and operators. These operators can be defined for their own types or for types that are already defined in Haskell. In Hanus, there are already a number of operators and types defined for the user to use. 
+	\paragraph{Definition of arbitrary types}
+	In a reversible language, any variable should have a default value with which a variable is initialised before the \textit{main} procedure is run. The original \textit{Janus} specification only allowed for integers. For integers the default value of 0 is chosen. In Hanus, for any number of the \textit{Haskell Num} class, the default is also 0. There are also a number of other types predefined in Hanus. Their defaults are implemented as follows:
+	\begin{itemize}
+		\item Bool: \textit{False}
+		\item $\lbrack\alpha\rbrack$ : \textit{[]}
+		\item Map $\alpha$ $\beta$: \textit{Data.Map.empty}
+		\item Maybe $\alpha$: \textit{Nothing}
+	\end{itemize}
+	Any user that wants to define their own type, has to implement an instance of \textit{DefaultValue} for the type they want to use as a \textit{Hanus} variable. It is possible to implement a \textit{DefaultValue} for a type without implementing any operators for that type. A variable of this type can not be changed in this case, except if the type is a subtype of another type. An example of this would be the class \textit{Real}. Because any \textit{Real} in Haskell has to be also a \textit{Num}, all operators defined on \textit{Num} could also be used on a \textit{Real}.
+	
+	\paragraph{Definition of operators}
+
+	In \textit{Hanus}, operators can be defined to manipulate variables.  These operators always come in pairs, one operator for the forward manipulation and one operator for the reverse manipulation. There is no restriction that these operators should be different. For example, the reverse of the negation operator is the negation operator. However, in most circumstances, there operator are two different manipulations. In the original \textit{Janus}, there were 4 manipulation operators defined. There are the operators \textit{+=}, \textit{-=}, \textasciicircum$=$ and $\Leftrightarrow$. All of these operators only work on integers, as the original \textit{Janus} does not support any other types. The semantics are as follows:
+	\begin{itemize}
+		\item $x+=e$ adds any arbitrary expression $e$ to the variable $x$. The reverse of this statement is $x-=e$. As long as the variable on the right hand side of the operator is not used in the expression $e$, $e$ can by any computation that results in an integer. The expression $x+=x$ is therefore not allowed, because this statement does not have a reverse. The constraint that the variable on the left can not occur on the right applies for all operators.
+		\item $x-=e$ subtract the arbitrary expression $e$ from the variable $x$. The reverse is the statement $x+=e$.
+		\item $x$\textasciicircum$=e$ does a bitwise $xor$ with the expression $e$. This operator is its own reverse. 
+		\item $x\Leftrightarrow y$ is the swap manipulator. This operator takes two variables and swaps their values. This operator is its own reverse. 
+	\end{itemize}
+	For a user to implement their own operator in \textit{Hanus}, they have to define their operator to be the of the type \textit{Operator}. The type \textit{Operator} is defined in \textit{Haskell} as $Operator$ $\alpha$ $\beta = Operator$ $ (\alpha \rightarrow  \beta -\rightarrow  \alpha)$ $(\alpha \rightarrow  \beta \rightarrow \alpha)$. The first variable is the operator to be used in forward operation, the second variable is the reverse of the first operator. The definition of $+=$ in \textit{Hanus} is \textit{(+=) = Operator  (+) (-)}. For the convenience of the user, the function \textit{inverseOf} is provided. This function takes an \textit{Operator} and a function as its arguments. This functions returns an operator that is the reverse of the first parameter and uses the second operator in forward execution. \textit{-=} is defined using $inverseOf$ as \textit{(-=) = inverseOf (+=) (-)}. Other operators that are defined for the users convenience include \textasciicircum$=$, swap, push and pop on a stack. All these operators are defined in \textit{Haskell}. Any user wanting to implement their own operators have to define these in \textit{Haskell}, as their is no way to define these in \textit{Hanus}.
+
+	\paragraph{Guarantee of reversibility}
+	The \textit{Operator} type does not guarantee reversibility. This means that there is no check that if a user specifies two manipulations $m_1$ and $m_2$ that $e \; m_1 (x \; m_2 \; e) = x$ holds for every variable $x$ and every expression $e$. It is possible that the user defines \textit{ (*=) = Operator (*) (+)}. It should be clear that this operator is incorrect, because the reverse of multiplication is not addition. However, \textit{Hanus} will not detect such a mistake and will run a program containing this code without problem. Therefore, a user that defines their own operator, should be careful to make sure that every operator they define is indeed reversible in every situation. 
+	\subsubsection{Indexers}	
+	Indexer are functions that are used to access specific fields in a data structure. These data structures are are implemented in \textit{Haskell} using the \textit{DefaultValue} type.
+	\paragraph{Field indexer}
+	A field index is an indexer used to point to a specified field of a data type. One example, implemented in \textit{Hanus} is the type \textit{BinaryTree}. This \textit{BinaryTree} is either a \textit{Node} with a value and two subtrees or a \textit{Leaf}. The \textit{DefaultValue} of a \textit{BinaryTree} is a \textit{Leaf}. This \textit{BinaryTree} is not very useful unless there would be an option to access the values or children of a tree. This is where \textit{FieldIndex} are used. To define a \textit{FieldIndexer}, a user should specify both a $get$ and a $set$ function. The $get$ function is used to retrieve the value from the data structure and the $set$ function is used insert the value in the data structure, possibly removing the data that was there before. This is not a problem for reversibility, because this $set$ and $get$ are never directly called by the program at runtime. They are used by the operators, retrieving the value, updating it and returning the updated value using the $set$ function. A few examples of the usage of a \textit{Field Indexer} include $x.nodeValue$ and $x.leftChild$. Each of these fields can then be used as a variable with any operator that support the type of the field.  The details of the implementation of \textit{BinaryTree} can be found in the code repository in the module $StdLib.BinaryTree$.
+	\paragraph{Array indexer}	
+	Array indexer have the same purpose as Field Indexer in that they are used to access specific parts of the data structure. The difference between the two indexers is that an \textit{ArrayIndexer} has one more variable. This variable is used to access a specific part of the data structure that is not necessary known at compile time. The most notable example is the default way access items in an array: $x[i]$ where $x$ is an array and $i$ is the key that points to a position in array $x$. In some languages, there is a restriction that the key has to be an integer. This restriction does not exists in \textit{Hanus}. A user is free to use any type as a key. For the definition, the \textit{ArrayIndexer} also requires two functions, one $get$ function and one $set$ function. The $get$ function requires the variable that needs to be accessed and a key that points to an item in the data structure. The $set$ function requires a function that receives the data structure, the key of variable in the data structure and the new value that needs to be inserted in the data structure. In \textit{Hanus}, $ArrayIndexer$ is used to implement arrays. This indexer can also be used for structures like maps, lists and similar structures. 
+	\subsubsection{}	
+	
 	\subsection{Goal/planning adjustments}
 \section{Reflection}
 	\subsection{Good/bad surprises}
