@@ -111,7 +111,7 @@ statePattern varDecs = mapM toPat varDecs
 evalProcedure :: [Pat] -> Declaration -> Q ([Dec])
 evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
     let p' = Procedure (Identifier (invert n)) vs (reverseBlock b)
-    pDecl <- actualEvalProcedure globalArgs $ p
+    pDecl  <- actualEvalProcedure globalArgs $ p
     pDecl' <- actualEvalProcedure globalArgs $ p'
     return [pDecl, pDecl']
 
@@ -327,21 +327,21 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
     -- The err will be thrown in a do block that should return a value, so we actually
     -- have to return a bogus value after we throw the error in order to please Haskell.
     let errStmt = NoBindS $ AppE err (tupP2tupE (snd env))
-    whileProcLoopIf       <- evalIfErr env (AppE (VarE (mkName "not")) fromGuard) whileProcCall [errStmt]
-    loopStmts             <- evalStmts loopStatements
-    let whileProcLoopBlock = loopStmts ++ (frst whileProcLoopIf)
+    whileProcLoopIf        <- evalIfErr env (AppE (VarE (mkName "not")) fromGuard) whileProcCall [errStmt]
+    (loopStmts, loopDecls) <- evalStmts loopStatements
+    let whileProcLoopBlock  = loopStmts ++ (frst whileProcLoopIf)
 
-    whileProcDoIf       <- evalSingleBranchIf env untilGuard whileProcLoopBlock
-    doStmts             <- evalStmts doStatements
-    let whileProcBlock = doStmts ++ (frst whileProcDoIf)
+    whileProcDoIf          <- evalSingleBranchIf env untilGuard whileProcLoopBlock
+    (doStmts, doDecls)     <- evalStmts doStatements
+    let whileProcBlock      = doStmts ++ (frst whileProcDoIf)
 
-    whileProcDec      <- actualEvalProcedure' whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
+    whileProcDec           <- actualEvalProcedure' whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
 
-    return (frst whileIf, [whileProcDec], env)
+    return (frst whileIf, [whileProcDec] ++ loopDecls ++ doDecls, env)
 
     where evalStmts stmts = do
               stmts <- foldM accResult (initR env) stmts
-              return $ (frst stmts)
+              return $ (frst stmts, scnd stmts)
 
 evalLocalVarDec :: Env -> Variable -> Exp -> [Statement] -> Exp -> Q EvalState
 evalLocalVarDec env v@(Variable (Identifier varName) _) init body exit = do
