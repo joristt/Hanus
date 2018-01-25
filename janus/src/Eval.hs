@@ -113,7 +113,7 @@ evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
     let p' = Procedure (Identifier (invert n)) vs (reverseBlock b)
     pDecl <- actualEvalProcedure globalArgs $ p
     pDecl' <- actualEvalProcedure globalArgs $ p'
-    return $ pDecl : pDecl' : hs1 ++ hs2
+    return [pDecl, pDecl']
 
 -- Evaluate a procedure to it's corresponding TH representation
 actualEvalProcedure :: [Pat] -> Declaration -> Q Dec
@@ -124,7 +124,7 @@ actualEvalProcedure globalArgs (Procedure n vs b) = do
     let inputArgs = map (\(Variable (Identifier n) t) -> SigP (VarP (mkName n)) t) vs
     let pattern = TupP globalArgs
     body <- evalProcedureBody b (pattern, TupP (globalArgs ++ inputArgs))
-    return $ FunD name [Clause (globalArgs ++ inputArgs) (fst body) (snd body)
+    return $ FunD name [Clause (globalArgs ++ inputArgs) (fst body) (snd body)]
 
 -- Evaluate a procedure to it's corresponding TH representation
 -- This function is specifically used as a part of evalWhile.
