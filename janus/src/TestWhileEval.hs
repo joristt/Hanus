@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, QuasiQuotes, FlexibleContexts #-}
 
-module TestEval where
+module RLE where
 
 import AST
 import Eval
@@ -10,59 +10,44 @@ import StdLib.Operator
 
 import QQ
 import StdLib.Operator
+import StdLib.ArrayIndexer
+import StdLib.FieldIndexer
+import StdLib.DefaultValue
 
 import qualified Data.List as List
 import qualified Data.Char as Char
+import qualified Data.Map as Map
 
 import Debug.Trace
 
 [hanusT|
-    n :: Int;
-    a :: Int;
-    b :: Int;
+procedure encode(text :: [Int], arc :: [Int]){
+    from (text /= []) && arc == [] do
+        local val :: Int = 0;
+        local n :: Int = 0;
+        val += head text;
+        #log val;
+        #log text;
+        #log arc;
+        #log n;
+        from n == 0 do
+            #log n;
+            local tmp :: Int = 0;
+            #log tmp;
+            pop text tmp;
+            #log tmp;
+            delocal val;
+            n += 1;
+            #log n;
+        until text == [] || ((head text) /= val);
+        push arc val;
+        push arc n;
+        delocal 0;
+        delocal 0;
+    until text == [];
+}
 
-    procedure fibiterlocal()
-    {
-        local fa :: Int = 1;
-        local fb :: Int = 1;
-
-        from fa == fb
-            do
-                n -= 1;
-                fa += fb;
-                swap fb fa;
-        until n == 1;
-
-        a += fa;
-        b += fb;
-
-        delocal 1;
-        delocal 1;
-    }
-
-    procedure fibiter()
-    {
-        a += 1;
-        b += 1;
-        from a == b
-            do
-                n -= 1;
-                a += b;
-                swap b a;
-        until n == 1;
-    }
-
-    procedure fibrec()
-    {
-        if n == 1 then
-            a += 1;
-            b += 1;
-        else
-            n -= 1;
-            call fibrec;
-            a += b;
-            swap b a;
-        fi 1 == 1;
-    }
-
+procedure main(text :: [Int], arc :: [Int]){
+    call encode text arc;
+}
 |]

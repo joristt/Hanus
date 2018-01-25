@@ -52,16 +52,15 @@ rightChild = FieldIndexer get set
     set (Node x l _) r = Node x l r
 
 createNode :: (DefaultValue a, Eq a) => Operator (BinaryTree a) ()
-createNode = inverseOf removeNode f
+createNode = Operator create remove
   where
-    f Leaf _ = Node defaultValue Leaf Leaf
-    f _ _ = error "createNode: got a node instead of a leaf"
-
-removeNode :: (DefaultValue a, Eq a) => Operator (BinaryTree a) ()
-removeNode = inverseOf createNode f
-  where 
-    f Leaf _ = error "removeNode: got a leaf instead of a node"
-    f (Node x Leaf Leaf) _
+    create Leaf _ = Node defaultValue Leaf Leaf
+    create _ _ = error "createNode: got a node instead of a leaf"
+    remove Leaf _ = error "removeNode: got a leaf instead of a node"
+    remove (Node x Leaf Leaf) _
       | x == defaultValue = Leaf
       | otherwise = error "removeNode: node had different value than defaultValue"
-    f (Node _ _ _) _ = error "removeNode: got a node with children, expected a node without children"
+    remove (Node _ _ _) _ = error "removeNode: got a node with children, expected a node without children"
+
+removeNode :: (DefaultValue a, Eq a) => Operator (BinaryTree a) ()
+removeNode = inverse createNode
