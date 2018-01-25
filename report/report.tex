@@ -35,18 +35,25 @@
     \subsection{Experiment}
     \subsection{Janus - Reversible Computation}
 \section{Methodology}
-	\subsection{Expected outcome}
-	\subsection{Planning}
+    \subsection{Expected outcome}
+    \subsection{Planning}
 \section{Results}
-	\subsection{Achievements}
-		\subsubsection{Eval}
-		\label{sec-eval}
-			An important part of Hanus is the eval module. Eval is responsible for the actual Hanus compilation: it takes a Hanus AST and compiles it to Haskell functions. In this section, the chosen compilation tactic for some of the more important or interesting types of the Hanus AST will be discussed.
-			
-			Every \textbf{Hanus procedure declaration} is compiled to pure Haskell functions that consist of a do statement, since do statements come closest to the imperative nature of a Hanus procedure in terms of structure. Every Hanus statement in a procedure is converted to one, or sometimes more than one statement in the Haskell do block. Since a procedure can be called to run it regularly and uncalled to run it in reverse, every Hanus procedure $p$ is compiled to not one but two Haskell functions: a function $p$ that does exactly what Hanus procedure $p$ should do, and a function $p'$ that is the inverse of $p$. Adding a prime to a procedure name will always be possible, since the Hanus parser does not accept the $'$ character.
-			
-			Hanus has two types of variables. \textbf{Global variables} are declared at the top level with a name and type. The programmer cannot specify a default value for the variable, but instead the variable will automatically get the default value of the specified type. Since global variables can be updated from anywhere in a Hanus program, Hanus imposes the restriction on the programmer that global variables cannot be passed to procedures. Furthermore, it would seem to be a sensible choice to substitute \emph{IORefs} for global variables since \emph{IORefs} are a Haskell solution to variables. However, the problem would then be that the entire Hanus AST and possible Haskell sub-AST's (since any Haskell expression can be written on the right hand side of a Hanus expression) would have to be traversed, replacing all variable declarations and expressions with \emph{readIORef} and \emph{writeIORef} operations, which would have been quite a challenge. Instead, global variables are simply declared as lets. If they need to be updated, they are just redeclared. Note that something like \inlinecode{a += 1} is not compiled to \inlinecode{let a = a + 1}, because this causes an endless loop due to \inlinecode{a} being on the left and right hand side. Instead, it is compiled to \inlinecode{let temp = a; let a = temp + 1}. To handle all difficult cases where there are function calls or nested statement blocks that (possibly) shadow the let declaration, but only in the nested scope, a simple call-by-copy-restore mechanism is used: the Haskell counterpart of any Hanus procedure takes all global variables as inputs, and the last statement in the do-block of the Haskell function returns all global variables in a single tuple. The callee then redeclares all global variables after the procedure call. An example:
-						
+    \subsection{Achievements}
+        \subsubsection{Evaluation}
+        \label{sec-eval}
+            An important part of Hanus is the eval module. Eval is responsible for the actual Hanus compilation: it takes a Hanus AST and compiles it to Haskell functions. In this section, the chosen compilation tactic for some of the more important or interesting types of the Hanus AST will be discussed.
+
+\subsubsection{General Approach}
+The general task of the evaluator is to convert a provided Janus program to a collection of top level declarations that can be spliced by the user and run just like regular Haskell code. The main challenge lies in the fact that Janus is an imperative language with mutable global state, while Haskell is neither imperative, nor does it have any sort of global state. 
+
+This problem can be solved by observing that a statement in an imperative language can in principle be viewed as a function that, given the current state of the program as its input, yields a new state as the result of executing the statement. All Hanus statements (with the exception of the \emph{log} statement) may only affect the variables that are in scope at that point, so we consider the program state for any statement to be the collection of variables that is in scope when executing that statement. 
+
+\subsubsection{Procedure Declarations}
+Every Hanus procedure declaration is compiled to a Haskell functions, consisting of a single do-statement, that performs a computation that is equivalent to that intended by the Hanus procedure. Every Hanus statement in a procedure is converted to one, or sometimes more than one statement in the Haskell do block. Since a procedure can be called to run it regularly and uncalled to run it in reverse, every Hanus procedure $p$ is compiled to not one but two Haskell functions: a function $p$ that does exactly what Hanus procedure $p$ should do, and a function $p'$ that is the inverse of $p$. Name conflicts as a result of this convention are impossible since the Hanus parser does not accept the $'$ character as part of a procedure identifier.
+
+\subsubsection{Global variables}
+Hanus has two types of variables. Global variables are declared at the top level with a name and type. The programmer cannot specify a default value for the variable, but instead the variable will automatically get the default value of the specified type. Since global variables can be updated from anywhere in a Hanus program, Hanus imposes the restriction on the programmer that global variables cannot be passed to procedures. Furthermore, it would seem to be a sensible choice to substitute \emph{IORefs} for global variables since \emph{IORefs} are a Haskell solution to variables. However, the problem would then be that the entire Hanus AST and possible Haskell sub-AST's (since any Haskell expression can be written on the right hand side of a Hanus expression) would have to be traversed, replacing all variable declarations and expressions with \emph{readIORef} and \emph{writeIORef} operations, which would have been quite a challenge. Instead, global variables are simply declared as lets. If they need to be updated, they are just redeclared. Note that something like \inlinecode{a += 1} is not compiled to \inlinecode{let a = a + 1}, because this causes an endless loop due to \inlinecode{a} being on the left and right hand side. Instead, it is compiled to \inlinecode{let temp = a; let a = temp + 1}. To handle all difficult cases where there are function calls or nested statement blocks that (possibly) shadow the let declaration, but only in the nested scope, a simple call-by-copy-restore mechanism is used: the Haskell counterpart of any Hanus procedure takes all global variables as inputs, and the last statement in the do-block of the Haskell function returns all global variables in a single tuple. The callee then redeclares all global variables after the procedure call. An example:
+                        
 \begin{minted}{haskell}
 a :: Int;
 b :: Int;
@@ -74,8 +81,9 @@ y a b = do
     (a, b)
 \end{minted}
 
-			The other type of variable is the \textbf{local variable}. Local variables are declared in a \emph{local} statement with a name, type and default value, and undeclared in an \emph{unlocal} statement with a final value. By the time the unlocal statement is being executed, the local variable should have the specified final value. Note however, that the final value can also be a non-literal expression. The unlocal block is there to function as initial value for the local variable if the procedure that it is part of is being uncalled, i.e. reversed: in that case, the local variable needs what as declared as its final value as its initial value, and vice versa. By the time the unlocal block is reached, an assertion is executed to make sure that the procedure can safely be reverted without giving the local variable an incorrect initial value. An unlocal block is implemented as a \inlinecode{let-in} Haskell statement, because this automatically takes care of removing a local variable from scope after the unlocal line. To keep it simple, nesting multiple local blocks with identical variable names is impossible, and local variables can never have the name of a global variable. The let-in block again causes scoping issues, for example here:
-			
+\subsubsection{Local Variables}
+The other type of variable is the local variable. Local variables are declared in a \emph{local} statement with a name, type and default value, and undeclared in an \emph{unlocal} statement with a final value. By the time the unlocal statement is being executed, the local variable should have the specified final value. Note however, that the final value can also be a non-literal expression. The unlocal block is there to function as initial value for the local variable if the procedure that it is part of is being uncalled, i.e. reversed: in that case, the local variable needs what as declared as its final value as its initial value, and vice versa. By the time the unlocal block is reached, an assertion is executed to make sure that the procedure can safely be reverted without giving the local variable an incorrect initial value. An unlocal block is implemented as a \inlinecode{let-in} Haskell statement, because this automatically takes care of removing a local variable from scope after the unlocal line. To keep it simple, nesting multiple local blocks with identical variable names is impossible, and local variables can never have the name of a global variable. The let-in block again causes scoping issues, for example here:
+            
 \begin{minted}{haskell}
 a :: Int;
 procedure x() {
@@ -84,7 +92,7 @@ procedure x() {
     unlocal 10;
 \end{minted}
 
-\noindent Here, \inlinecode{a} will be redeclared in the \inlinecode{let-in} block, but as soon as the block ends, it will get its old value of \inlinecode{10} again.Therefore, local blocks too make use of the restore functionality that procedures make use of, making the final Haskell code look roughly like this:
+\noindent Here, \inlinecode{a} will be redeclared in the \inlinecode{let-in} block, but as soon as the block ends, it will get its old value of \inlinecode{10} again.Therefore, local blocks too make use of the restore functionality that procedures make use of, making the final generated Haskell code look roughly like this:
 
 \begin{minted}{haskell}
 x a = do
@@ -101,6 +109,7 @@ x a = do
 
 Local variables can be passed around to functions, since they are handled as reference types. An example of a procedure that takes local variables is \inlinecode{procedure x(n :: Int)}. In order to be able to correctly update local variables, they too were made part of the copy restore system, meaning that that the Haskell equivalent of procedure x takes all global arguments as input, plus the local variables \inlinecode{n}, and that the Haskell function returns them all in a single tuple. Since local variables cannot shadow global variables, and since global variables cannot be explicitly passed to procedures, duplicate naming issues will never occur.
 
+\subsubsection{Log Statement}
 A special type of Hanus statement is the \textbf{\#log} statement. It uses the \inlinecode{Debug.Trace} Haskell module to print the current value of the specified variables. However, Haskell is a lazy language, so a sequence of Hanus statements like \#\inlinecode{log a; a += 1; }\#\inlinecode{log a;} will write "1" and then "0" to the console. Therefore, \#\inlinecode{log} statements are strictly evaluated using a bang pattern, making the Haskell code look something like this:
 
 \begin{minted}{haskell}
@@ -110,26 +119,88 @@ let a = temp + 1
 let !irrelevant = trace a 0
 \end{minted}
 
-Compiling the \textbf{loop-until statement} to Haskell was a particularly challenging task. A single while-iteration is simple enough: just execute the body of the loop and use the by now well known restore mechanism to update values in the outer scope. Two loops is simple too: just nest the do-blocks and let them all return the restore tuple on the last line. Same goes for $n$ loops. However, a challenge arrises as soon as $n$ is unknown at compile time, because how should the compiler know how many loop bodies it should nest? The obvious solution to this problem is to compile a loop a recursive function that uses the copy-restore mechanism and keeps calling itself at runtime until its guard evaluates to false. The actual loop statement can then be replaced with a simple call to the loop function. However, different loops can be placed in different procedures that can have different local variables, so the input arguments for the Haskell loop function needs to depend on the particular while loop and its scope. This problem can be solved by generating a unique loop function for every loop declaration. However, the problem is that, at the time the loop was being implemented, no scope log was actively being kept in memory, meaning that the Eval module could not actually know what the signature of the recursive loop function had to become, nor could it know how it could correctly call that Haskell function. Therefore, it was necessary to keep track of the scope everywhere in the Eval module, meaning that every time a local variable was being declared or undeclared, the scope had to be updated. By doing this, whenever Eval encountered a loop block in the AST, it knew exactly what the function signature had to be of the loop function it had to generate, what the type of the return tuple of that function had to be, and what the function call had to look like that had to function as substitute for the original loop block.
+\subsubsection{If Statements}
+The conversion of \texttt{if} statements to an equivalent Haskell representation is rather straightforward, since Haskell includes a built-in \texttt{if then else} construct. The conversion can be done by simply generating \texttt{do} blocks for both branches, wrapping them in an \texttt{if then else} construct, and updating the program state with the resulting expression. Since the guard in Janus is in fact already a Haskell expression, it can be transferred directly to the generated \texttt{if then else} expression. 
 
-\leavevmode\newline\textbf{Entrypoint function / temp varlues / how do we do unique naming / while loops or if statements (I suggest we do one of the two)}\newline
-@Cas, take it away.
+\subsubsection{Loops Statements}
+Compiling the \emph{loop-until statement} to Haskell was a particularly challenging task. A single while-iteration is simple enough: just execute the body of the loop and use the by now well known restore mechanism to update values in the outer scope. Two loops is simple too: just nest the do-blocks and let them all return the restore tuple on the last line. Same goes for $n$ loops. However, a challenge arises as soon as $n$ is unknown at compile time, because how should the compiler know how many loop bodies it should nest? The obvious solution to this problem is to compile a loop a recursive function that uses the copy-restore mechanism and keeps calling itself at runtime until its guard evaluates to false. The actual loop statement can then be replaced with a simple call to the loop function. However, different loops can be placed in different procedures that can have different local variables, so the input arguments for the Haskell loop function needs to depend on the particular while loop and its scope. This problem can be solved by generating a unique loop function for every loop declaration. However, the problem is that, at the time the loop was being implemented, no scope log was actively being kept during the code generation process, meaning that the Eval module could not actually know what the signature of the recursive loop function had to become, nor could it know how it could correctly call that Haskell function. Therefore, it was necessary to keep track of the scope everywhere in the Eval module, meaning that every time a local variable was being declared or undeclared, the scope had to be updated. By doing this, whenever Eval encountered a loop block in the AST, it knew exactly what the function signature had to be of the loop function it had to generate, what the type of the return tuple of that function had to be, and what the function call had to look like that had to function as substitute for the original loop block.
 
-	
-	\subsection{Goal/planning adjustments}
+\subsubsection{Entry Point Generation}
+For convenience of the end user, the provided QuasiQuoters provide an extra generated function \texttt{run} that calls the generated \texttt{main} function. Simply calling the \texttt{main} function itself would also be perfectly possible, but since it is actually a function with type \texttt{State -> State}, the programmer would have to provide an initial state for the program. Since all variables in Hanus are assumed to have a defined default value, this initial state is implicit. The provided entry point generates this initial state from the types of all global variables and calls the \texttt{main} function.
+
+\subsubsection{Array and Field Indexers}
+Hanus allows for the user to define field indexers for any data type or to make any data type indexable. Running the Hanus program below would result in a value of \texttt{(4,2)} for \texttt{t} and \texttt{["foo" => 1, "bar" => 2]} for \texttt{a}. 
+\begin{minted}{Haskell}
+t :: (Int, Int);
+a :: Array String Int;
+
+procedure x()
+{
+    t.first += 2;
+    t.second += 4;
+    swap t.first t.second;
+}
+
+procedure y()
+{
+    a["foo"] += 1;
+    a["bar"] += 2;
+}
+
+procedure main()
+{
+    call x();
+    call y();
+}
+\end{minted}
+
+Due to the way these functionalities are implemented at the Haskell level, it is necessary to use a slightly different restoration strategy when assigning a value through a field or array indexer. This is a result of the fact that applying assignment operators to field or array indexes does not yield a new value for the actual data structure, but rather a new value for a certain field or index within that structure. The structure itself still has to be updated with the new value after applying the operator. To solve this problem, all variables that are affected by an operation are restored individually instead of all at once. Compare the restore mechanism demonstrated in section on \emph{global variables} with the code that is generated for the example shown above:
+
+\begin{minted}{Haskell}
+-- Similar to as demonstrated in the section on global variables
+let temp = swap (a,b) ()
+let (a,b) = temp
+
+-- Partial (simplified) splice generated for the procedure 
+-- x() in the example above
+let (v1, v2) = swap ((get first) t), ((get second) t)) ()
+let tmp1 = (set first) t v1
+let t = tmp1
+let tmp2 = (set second) t v2
+let t = tmp2
+\end{minted}
+
+Note that the shown splice in the second example is a simplified version of the actual splice, \texttt{get} and \texttt{set} represent functions that extract the necessary function from the predefined field indexers \texttt{first} and \texttt{second}. 
+
+Unfortunately, nested field or array indexers are not yet supported due to limited time being available. In order to support nested indexers the restore mechanism would have to be expanded in order to cope with updating nested structures. In general, the generated code for an assignment such as \texttt{t.first.first += 1;} would look something like this: 
+
+\begin{minted}{Haskell}
+let v = (+=) ((get first) ((get first) t)) 1
+let tmp1 = 
+    let tmp2 = (set first) ((get first) t) v 
+        in (set first) t tmp2
+let t = tmp1
+\end{minted}
+
+\subsubsection{Naming}
+In order to create a functioning program, the evaluator generates quite a lot of helper variables and functions. Names provided by the input program are kept the same (GHC will resolve them for us). In all other cases, Template Haskell provides the function \texttt{newName} that generates a name that is guaranteed to be unique inside the current scope. 
+
+The usage of this method was not always free of problems unfortunately, since GHC would consider the names of generated helper functions to be out of scope in some cases, even though their declaration would be spliced at top level. The exact source of this problem remains unclear, but we were able to circumvent this issue by moving the declaration of any helper functions to a where clause attached to the function in which they are needed. 
+    
+    \subsection{Goal/planning adjustments}
 \section{Reflection}
-	\subsection{Good/bad surprises}
-		As was already stated in section \ref{sec-eval}, it was very challenging to implement while loops. Part of it was the difficult evaluation structure of a Janus / Hanus loop (reference to original Janus paper), but another large aspect was the fact that it was all of the sudden necessary to keep track of the current scope \emph{everywhere}. Since all basic Hanus features were being implemented in Eval before the more advanced statements were being added, a tactic that was not bad per se, the risk always is that you have to rewrite code because an advanced feature does not play nice. This was the case here: a substantial amount of Eval code had to be adapted or rewritten and this took up quite a bit of time. Before Eval was rewritten, a not unsubstantial amount of time was also put into trying to find a way to make inlining a loop possible using higher order monad functions, but this research sadly enough did not pay off.
+    \subsection{Good/bad surprises}
+        As was already stated in section \ref{sec-eval}, it was very challenging to implement while loops. Part of it was the difficult evaluation structure of a Janus / Hanus loop (reference to original Janus paper), but another large aspect was the fact that it was all of the sudden necessary to keep track of the current scope \emph{everywhere}. Since all basic Hanus features were being implemented in Eval before the more advanced statements were being added, a tactic that was not bad per se, the risk always is that you have to rewrite code because an advanced feature does not play nice. This was the case here: a substantial amount of Eval code had to be adapted or rewritten and this took up quite a bit of time. Before Eval was rewritten, a not unsubstantial amount of time was also put into trying to find a way to make inlining a loop possible using higher order monad functions, but this research sadly enough did not pay off.
 
-	\subsection{Problems along the way}
-		Although everybody was aware of the amount of work that had to be put into the Eval module from the get go, it still cost a lot more time eventually. For a problem that, we all already recognised back then, was going to be difficult, more time should have been claimed since a problem that seems theoretically challenging is almost always far more difficult in practice. However, a mistake was also made by not correctly working in a strictly iterative fashion. The result of this was that the Eval module was almost always broken in one way or another because it was still not finished Working in a strictly iterative fashion, always working on one function and one function only, would have resulted in a clearer overview of what the tasks and goals were at every moment, and in clearer moments on which the only partially finished but at least stable Eval module could be merged with the master branch.
-		
-		\textbf{@Cas write a bit about struggles between team parser and team eval?}
-	
+    \subsection{Problems along the way}
+        Although everybody was aware of the amount of work that had to be put into the Eval module from the get go, it still cost a lot more time eventually. For a problem that, we all already recognised back then, was going to be difficult, more time should have been claimed since a problem that seems theoretically challenging is almost always far more difficult in practice. However, a mistake was also made by not correctly working in a strictly iterative fashion. The result of this was that the Eval module was almost always broken in one way or another because it was still not finished. Working in a strictly iterative fashion, always working on one function and one function only, would have resulted in a clearer overview of what the tasks and goals were at every moment, and in clearer moments on which the only partially finished, but stable, Eval module could be merged with the master branch.
+        
+Due to an initial lack of tests for all possible Hanus constructs, progress on the evaluator was slightly delayed towards the end of the project, since a few previously unknown bugs in the parser became exposed at that time. 
+
 \section{Appendix}
-	\subsection{Repo link}
-	The public repository can be found at \url{https://github.com/joristt/Hanus}.
-	\subsection{Code navigation}
+    \subsection{Repo link}
+    The public repository can be found at \url{https://github.com/joristt/Hanus}.
+    \subsection{Code navigation}
 
 \newpage
 \bibliographystyle{ieeetr}
