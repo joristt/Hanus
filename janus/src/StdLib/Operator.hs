@@ -13,7 +13,7 @@ symmetric :: (a -> b -> a)-> Operator a b
 symmetric f = Operator f f
 
 (+=), (-=) :: (Num a) => Operator a a
-(+=) = Operator  (+) (-)
+(+=) = Operator (+) (-)
 (-=) = inverse (+=)
 
 (^=) :: (B.Bits a) => Operator a a
