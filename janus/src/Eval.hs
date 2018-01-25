@@ -113,7 +113,7 @@ evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
     let p' = Procedure (Identifier (invert n)) vs (reverseBlock b)
     pDecl <- actualEvalProcedure globalArgs $ p
     pDecl' <- actualEvalProcedure globalArgs $ p'
-    return $ [pDecl, pDecl']
+    return [pDecl, pDecl']
 
 -- Evaluate a procedure to it's corresponding TH representation
 actualEvalProcedure :: [Pat] -> Declaration -> Q Dec
