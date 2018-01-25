@@ -133,7 +133,7 @@ actualEvalProcedure' name scopeTup@(TupP scope) stmts = do
     body <- evalProcedureBody' stmts scopeTup
     return $ FunD name [Clause scope body []]
 
--- Evaluates a procedure body (== Block (note that type Block = [Statement]))
+-- Evaluates a procedure body (== Block (note that type Block = [Statement])) 
 -- This function is specifically used as a part of evalWhile.
 evalProcedureBody' :: [Stmt] -> Pat -> Q Body
 evalProcedureBody' stmts entireScope = do
@@ -408,6 +408,7 @@ concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
 concatMapM op = foldr f (return [])
     where f x xs = do x <- op x; if null x then xs else do xs <- xs; return $ x++xs
 
+-- Accumulator used for folding all statements in a procedure
 accResult :: EvalState -> Statement ->  Q EvalState
 accResult r stmt = do
   eval <- evalStatement (thrd r) stmt
