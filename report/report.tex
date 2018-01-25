@@ -47,9 +47,11 @@ Axelsen e.a. \cite{axelsen11} proposed the notion of reversible Turing completen
 A reversible Turing machine is defined as a forward and backward deterministic Turing machine.
 
 \subsubsection{Convert Turing machines}
-If we want to compute some non-injective function $f(x)$, we can create an injective function $x \to (f(x), x)$. As shown by \cite{axelsen11}, if $f(x)$ is computable by some Turing machine, then there exists a reversible Turing machine which computes $x \to (f(x), x)$. This machine might use more time and memory.
+If we want to compute some non-injective function $f(x)$, we can create an injective function $x \to (f(x), x)$. As shown by \cite{axelsen11}, if $f(x)$ is computable by some Turing machine, then there exists a reversible Turing machine which computes $x \to (f(x), x)$ which uses three memory tapes instead of one. This three-tape reversible Turing machine can be converted to a normal single tape reversible Turing machine.
 
-In Hanus, this trick can be used, with only a minimal amount of additional memory and time. For simplicity, assume that $f$ is a function from integers to integers. When function $f$ is implemented in Haskell, a Hanus procedure that computes $(0, x) \to (f(x), x)$ can be created as follows.
+Given a computable function $f$, we can thus write a program in a reversible language that computes $x \to (f(x), x)$. However, this might use more memory and time than in a non-reversible language.
+
+In Hanus, this trick can be used with only a minimal amount of additional memory and time. For simplicity, assume that $f$ is a function from integers to integers. When function $f$ is implemented in Haskell, a Hanus procedure that computes $(0, x) \to (f(x), x)$ can be created as follows.
 
 \begin{minted}{haskell}
 procedure g(y :: Int, x :: Int) {
@@ -64,10 +66,10 @@ procedure g(y :: Int, x :: Int) {
 	\subsection{Achievements}
 	
 \subsubsection{Parser}
-We implemented the parser for Hanus using uu-parsinglib \footnote{\url{https://hackage.haskell.org/package/uu-parsinglib}}. This allowed us to write a parser using parser combinators and get error correction. However, the error correction was not very reliable and can cause that the program does not terminate if there is a syntactic error. We expect that this is caused by the way that we parse Haskell expressions.
+We implemented the parser for Hanus using uu-parsinglib\footnote{\url{https://hackage.haskell.org/package/uu-parsinglib}}. This allowed us to write a parser using parser combinators and get error correction. However, the error correction was not very reliable and can cause that the program does not terminate if there is a syntactic error. We expect that this is caused by the way that we parse Haskell expressions.
 
 \subsubsection{Parsing Haskell expressions and types}
-The syntax for our DSL supports Haskell expressions and types. We use the haskell-src-meta package \footnote{\url{https://hackage.haskell.org/package/haskell-src-meta}} to parse those. However, to use this package, we must know where a Haskell expression or type ends. Consider an assignment of the form \textit{x += expr;}, where \texttt{expr} is some expression. We will find the first occurrence of a semicolon in the source string and try to parse this section of the source. If the source code is \texttt{x += length "a;b";}, it will try to parse \texttt{length "a} as a Haskell expression. This will fail, and the parser will try to find the next occurrence of a semicolon. Thus, it will try to parse \texttt{length "a;b"}, which does parse.
+The syntax for our DSL supports Haskell expressions and types. We use the haskell-src-meta package\footnote{\url{https://hackage.haskell.org/package/haskell-src-meta}} to parse those. However, to use this package, we must know where a Haskell expression or type ends. Consider an assignment of the form \textit{x += expr;}, where \texttt{expr} is some expression. We will find the first occurrence of a semicolon in the source string and try to parse this section of the source. If the source code is \texttt{x += length "a;b";}, it will try to parse \texttt{length "a} as a Haskell expression. This will fail, and the parser will try to find the next occurrence of a semicolon. Thus, it will try to parse \texttt{length "a;b"}, which does parse.
 
 We expect that this does not play well with the error correction mechanisms of uu-parsinglib and cause that the parser does not terminate on invalid inputs. However, on some inputs the error correction does correct the input.
 	
