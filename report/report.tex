@@ -1,3 +1,4 @@
+% !TeX spellcheck = en_US
 \documentclass[12pt,a4paper]{article}
 
 \usepackage{minted}
@@ -18,7 +19,7 @@
 \definecolor{linkcolour}{rgb}{0,0.2,0.6}
 \hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
 
-\title{\textbf{Project Report \\ \small{Concepts of Program Design}}}
+\title{Hanus: The embedded reversible language in Haskell \\ \small{Report - Concepts of Program Design}}
 \author{\small{Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, Orestis Melkonian}}
 \date{}
 
@@ -30,15 +31,98 @@
 \maketitle
 
 \section{Problem}
+\label{section:problem}
     \subsection{Experiment}
-    \subsection{Janus - Reversible Computation}
+In Janus, a time-reversible programming languages, all procedures can be executed forward and backward. This gives a limitation on the programs that a programmer can write and makes it thus hard to write certain applications. That gave us the following research question for our experiment:
+
+\begin{displayquote}
+	\textit{Can we improve the usability of Janus by implementing it as a DSL embedded in Haskell?}
+\end{displayquote}
+
+\noindent In order to be able to answer this question, we attempted to improve Janus in several ways, mainly by incorporating various elements of the host language (Haskell) in the DSL, as well as the addition of certain language constructs. We implemented certain algorithms in both our DSL and standard Janus and compared the implementations with respect to various metrics, such as performance and readability. 
+
+In this report, we will describe our implementation of the Janus as a DSL in Haskell, which we called \textit{Hanus}. We will start by giving some context on Janus and reversible languages in general in section \ref{section:problem}. We will describe the extensions and expected outcome in section \ref{section:methodology}. We describe on the results of our DSL in section \ref{section:results} and reflect on the process in section \ref{section:reflect}.
+
+\subsection{Janus}
+We implemented the reversible programming language Janus as a DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} were used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the \texttt{READ} and \texttt{WRITE} statements will not be valid statements
+
+\subsection{Extensions}
+We added various extensions, mainly focused on improving the usability of our DSL:
+
+\begin{itemize}
+	\item 
+	Local variable blocks
+	\item
+	Function arguments
+	\item
+	Arbitrary types
+\end{itemize}
+
+Some Janus features, such as the stack and arrays will not be implemented directly into the DSL, but are available through predefined functions in the host language.
+
+\subsection{$r$-Turing completeness}
+Given that only reversible programs can be written in a reversible language, it can only compute injective functions. This means that it cannot simulate any Turing machine, as Turing machines can compute non-injective functions. Thus, reversible languages are not Turing complete \cite{axelsen11}.
+
+Axelsen e.a. \cite{axelsen11} proposed the notion of reversible Turing completeness ($r$-Turing completeness), meaning that the language can simulate any reversible Turing machine (RTM). To define this, we must first know the concepts of forward and backward determinism.
+
+\begin{itemize}
+	\item A Turing machine is \textit{forward deterministic} if from any state and tape, only one transition to a new state and tape exists.
+	\item Similarly, a Turing machine is \textit{backward deterministic} if given any state and tape, only one transition that leads to this state exists.
+\end{itemize}
+
+A reversible Turing machine is defined as a forward and backward deterministic Turing machine.
+
+\subsubsection{Convert Turing machines}
+If we want to compute some non-injective function $f(x)$, we can create an injective function $x \to (f(x), x)$. As shown by \cite{axelsen11}, if $f(x)$ is computable by some Turing machine, then there exists a reversible Turing machine which computes $x \to (f(x), x)$ which uses three memory tapes instead of one. This three-tape reversible Turing machine can be converted to a normal single tape reversible Turing machine.
+
+Given a computable function $f$, we can thus write a program in a reversible language that computes $x \to (f(x), x)$. However, this might use more memory and time than in a non-reversible language.
+
+In Hanus, this trick can be used with only a minimal amount of additional memory and time. For simplicity, assume that $f$ is a function from integers to integers. When function $f$ is implemented in Haskell, a Hanus procedure that computes $(0, x) \to (f(x), x)$ can be created as follows.
+
+\begin{minted}{haskell}
+procedure g(y :: Int, x :: Int) {
+  y += f x;
+}
+\end{minted}
+
 \section{Methodology}
+\label{section:methodology}
+\subsection{DSL Embedding}
+\label{subsec:template-haskell}
+In order to embed Janus as a DSL in Haskell, we used the \textit{TemplateHaskell}(TH)\cite{sheard02} and \textit{QuasiQuotation}\cite{mainland07} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This allows us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
+
+On the static checking side of things, TH allowed us to perform the following at compile-time:
+\begin{itemize}
+	\item{Parsing}
+	\item{Checking that programs are well-typed}
+	\item{Verifying proper variable usage}
+	\item{Embedding of Haskell expressions}
+\end{itemize}
+
+Specifically, Hanus programs can be written as \textit{quasi-quote} strings inside a Haskell source file, which will eventually transfer control to a \textit{quasi quoter}, that will parse and statically check desired properties of the given program, as well as compile the domain-specific syntax to Haskell code.
+
+For instance, Hanus statements of the form \textbf{id} $\langle\textsc{reversibleOp}\rangle$ \textbf{expr} require that the identifier on the left-hand side does not occur in the expression on the right-hand side. This is easily achieved in TH via the process of \textit{reification}, which allows us to query compile-time information (e.g. a variable's type and identifier) while running our meta-programs.
+
+In addition to compile-time guarantees, the embedded Hanus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
+
+\subsection{Parser}
+We implemented the parser for Hanus using uu-parsinglib\footnote{\url{https://hackage.haskell.org/package/uu-parsinglib}}. This allowed us to write a parser using parser combinators and get error correction. However, the error correction was not very reliable and can cause that the program does not terminate if there is a syntactic error. We expect that this is caused by the way that we parse Haskell expressions.
+
+\subsubsection{Parsing Haskell expressions and types}
+The syntax for our DSL supports Haskell expressions and types. We use the haskell-src-meta package\footnote{\url{https://hackage.haskell.org/package/haskell-src-meta}} to parse those. However, to use this package, we must know where a Haskell expression or type ends. Consider an assignment of the form \textit{x += expr;}, where \texttt{expr} is some expression. We will find the first occurrence of a semicolon in the source string and try to parse this section of the source. If the source code is \texttt{x += length "a;b";}, it will try to parse \texttt{length "a} as a Haskell expression. This will fail, and the parser will try to find the next occurrence of a semicolon. Thus, it will try to parse \texttt{length "a;b"}, which does parse.
+
+We expect that this does not play well with the error correction mechanisms of uu-parsinglib and cause that the parser does not terminate on invalid inputs. However, on some inputs the error correction does correct the input.
+
+
 	\subsection{Expected outcome}
 	\subsection{Planning}
 \section{Results}
+\label{section:results}
 	\subsection{Achievements}
+
 	\subsection{Goal/planning adjustments}
 \section{Reflection}
+\label{section:reflect}
 	\subsection{Good/bad surprises}
 	\subsection{Problems along the way}
 \section{Appendix}
