@@ -5,9 +5,11 @@ import           Data.List                  (nub, (\\))
 import           Language.Haskell.TH.Syntax
 
 
-semanticCheck :: Program -> Bool
-semanticCheck prog =
-  and [ check prog | check <- [ mainExists, rhsCheck] ]
+semanticCheck :: Program -> Maybe String
+semanticCheck prog
+  | not (mainExists prog) = Just "main procedure not found"
+  | not (rhsCheck prog) = Just "assigned variable appears on the left-hand side"
+  | otherwise = Nothing
 
 -- | Check that main exists.
 mainExists :: Program -> Bool

@@ -47,8 +47,11 @@ runQQParser prog = do
   loc <- location
   let (row, col) = loc_start loc
   let p = parser (loc_filename loc) row col prog
-  unless (semanticCheck p) $ fail "Semantic check failed!"
-  return p
+  case semanticCheck p of
+    Just err -> fail $
+      "Semantic check failed at (line " ++ show row ++ ", col " ++ show col
+        ++ "):\n\t" ++ err
+    Nothing -> return p
 
 -- | Parser for testing purposes, semantic checks are disabled
 runQQParserT :: String -> Q Program
