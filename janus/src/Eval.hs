@@ -265,14 +265,16 @@ evalFunctionCallWithName env name (TupP args) = do
          args
     return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
 
+-- Evaluates a list of Statements, given a certain Env, and returns the
+-- evaluated list of Statements in a do block, together with possible
+-- nested declarations and an updated environment.
 evalBranch :: [Statement] -> Env -> Q (Exp, [Dec], Env)
 evalBranch b env = do
     stmts <- foldM accResult (initR env) b
     let e = DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
     return (e, scnd stmts, thrd stmts)
 
--- If a sequence of Statements has already been evaluated to a sequence of Stmt,
--- we don't care about an updated env or nested Decls, so we don't have to return that.
+-- Convert a sequence of statements in an EvalState to a do block.
 branchToDoExp :: EvalState -> Env -> Q Exp
 branchToDoExp stmts env
     = return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
