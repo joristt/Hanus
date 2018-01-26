@@ -133,7 +133,7 @@ actualEvalProcedure' name scopeTup@(TupP scope) stmts = do
     body <- evalProcedureBody' stmts scopeTup
     return $ FunD name [Clause scope body []]
 
--- Evaluates a procedure body (== Block (note that type Block = [Statement])) 
+-- Evaluates a procedure body (== Block (note that type Block = [Statement]))
 -- This function is specifically used as a part of evalWhile.
 evalProcedureBody' :: [Stmt] -> Pat -> Q Body
 evalProcedureBody' stmts entireScope = do
@@ -152,7 +152,7 @@ evalStatement :: Env -> Statement -> Q EvalState
 evalStatement env (Assignment direction op lhss expr) = evalAssignment env direction op lhss expr
 evalStatement env (Call (Identifier i) args)          = evalFunctionCall env i args
 evalStatement env (Uncall (Identifier i) args)        = evalFunctionCall env (invert i) args
-evalStatement env (If exp tb eb _)                    = evalIf env exp tb eb
+evalStatement env (If ifExp tb eb fiExp)              = evalIf env ifExp tb eb fiExp
 evalStatement env (LoopUntil from d l until)          = evalWhile env from until d l 
 evalStatement env (Log   lhss)                        = evalLog env lhss
 evalStatement env (LocalVarDeclaration var i stmts e) = evalLocalVarDec env var i stmts e
@@ -175,7 +175,7 @@ evalLog env xs = do
     throwLogExceptionIfNecessary
     -- We take the tail because the first Exp is a separator.
     let logUpdateStmts = ListE $ tail $ evalLogUpdate xs
-    tmpN <- newName "tmp'"
+    tmpN <- newName "tmp''"
     let concatedList = (AppE (toE "concat") logUpdateStmts)
     let zero = LitE $ IntegerL 0
     let traceExp  = AppE (AppE (toE "trace") concatedList) zero
@@ -227,13 +227,13 @@ evalAssignment env direction op lhss exp = do
             case lhs of 
               (LHSIdentifier ident) -> return $ [letStmt (VarP $ nameId ident) (VarE vname)]
               (LHSArray lhs exp)    -> do
-                tmpN <- newName "tmp'"
+                tmpN <- newName "tmp''"
                 x <- argE lhs
                 let res = letStmt (VarP tmpN) (AppE (AppE (AppE ((VarE . mkName) "indexerSet") x) exp) (VarE vname))
                 return [res, letStmt (lhsP lhs) (VarE tmpN)]
               (LHSField obj field) -> do
                 set <- [|(\(FieldIndexer _ s) -> s)|]
-                tmpN <- newName "tmp'"
+                tmpN <- newName "tmp''"
                 x <- argE obj
                 let res = letStmt (VarP tmpN) (AppE (AppE (AppE set (VarE $ nameId field)) x) (VarE vname))
                 return [res, letStmt (lhsP lhs) (VarE tmpN)]
@@ -245,7 +245,7 @@ evalAssignment env direction op lhss exp = do
 -- Evaluate a janus procedure call to it's corresponding TH representation
 evalFunctionCall :: Env -> String -> [LHS] -> Q EvalState
 evalFunctionCall env@(TupP globalsList, _) name args = do
-    tmpN <- newName "tmp'"
+    tmpN <- newName "tmp''"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
@@ -257,7 +257,7 @@ evalFunctionCall env@(TupP globalsList, _) name args = do
 
 evalFunctionCallWithName :: Env -> Name -> Pat -> Q EvalState
 evalFunctionCallWithName env name (TupP args) = do
-    tmpN <- newName "tmp'"
+    tmpN <- newName "tmp''"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
@@ -265,40 +265,56 @@ evalFunctionCallWithName env name (TupP args) = do
          args
     return ([letStmt (VarP tmpN) f, letStmt (fst env) (VarE tmpN)], [], env)
 
+-- Evaluates a list of Statements, given a certain Env, and returns the
+-- evaluated list of Statements in a do block, together with possible
+-- nested declarations and an updated environment.
+evalBranch :: [Statement] -> Env -> Q (Exp, [Dec], Env)
+evalBranch b env = do
+    stmts <- foldM accResult (initR env) b
+    let e = DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
+    return (e, scnd stmts, thrd stmts)
+
+-- Convert a sequence of statements in an EvalState to a do block.
+branchToDoExp :: EvalState -> Env -> Q Exp
+branchToDoExp stmts env
+    = return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
+
 -- Evaluate a janus 'if' statement to it's corresponding TH representation
-evalIf :: Env -> Exp -> [Statement] -> [Statement] -> Q EvalState
-evalIf env g tb eb = do
-    b1   <- evalBranch tb
-    b2   <- evalBranch eb
-    tmpN <- newName "tmp'"
-    let ifExp  = CondE g b1 b2
-    let ifStmt = letStmt (VarP tmpN) ifExp
-    return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], env)
-    where evalBranch branch = do 
-            stmts <- foldM accResult (initR env) branch
-            return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
+evalIf :: Env -> Exp -> [Statement] -> [Statement] -> Exp -> Q EvalState
+evalIf env ifExp tb eb fiExp = do
+    (b1,decls1,_) <- evalBranch tb env
+    (b2,decls2,_) <- evalBranch eb env
+    tmpN <- newName "tmp''"
+    gN1  <- newName "guardRes1'"
+    gN2  <- newName "guardRes2'"
+    let ifGuardStmt             = letStmt (VarP gN1) ifExp
+    let fiGuardStmt             = letStmt (VarP gN2) fiExp
+    let ifExp                   = CondE (VarE gN1) b1 b2
+    let ifStmt                  = letStmt (VarP tmpN) ifExp
+    let updateStmt              = letStmt (snd env) (VarE tmpN)
+    let assertExp               = AppE (AppE (VarE $ mkName "==") (VarE gN1)) (VarE gN2)
+    assertFailExp              <- runQ [|error "The Boolean result of if guard == Boolean result of fi guard."|]
+    (assertStmts,decls,newEnv) <- evalIfErr env assertExp ([], [], env) [NoBindS assertFailExp]
+    let stmts = ifGuardStmt : ifStmt : updateStmt : fiGuardStmt : assertStmts
+    return (stmts, decls ++ decls1 ++ decls2, newEnv)
 
 evalIfErr :: Env -> Exp -> EvalState -> [Stmt] -> Q EvalState
 evalIfErr env g tb eb = do
-    b1     <- evalBranch tb
+    b1     <- branchToDoExp tb env
     let b2  = DoE eb
-    tmpN   <- newName "tmp'"
+    tmpN   <- newName "tmp''"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
     return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], env)
-    where evalBranch stmts = do 
-            return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
 
 evalSingleBranchIf :: Env -> Exp -> [Stmt] -> Q EvalState
 evalSingleBranchIf env g eb = do
-    b1   <- evalBranch ([], [], env)
-    b2   <- evalBranch (eb, [], env)
-    tmpN <- newName "tmp'"
+    b1 <- branchToDoExp ([],[],env) env
+    b2 <- branchToDoExp (eb,[],env) env
+    tmpN <- newName "tmp''"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
     return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], env)
-    where evalBranch stmts = do 
-            return $ DoE ((frst stmts) ++ [(NoBindS (tupP2tupE (snd env)))])
 
 {- Flow of a loop is: 
       fromGuard True -> doStmts -> untilGuard True -> loop successfully terminates
@@ -314,19 +330,19 @@ evalSingleBranchIf env g eb = do
 -}
 evalWhile :: Env -> Exp -> Exp -> [Statement] -> [Statement] -> Q EvalState
 evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatements = do
-    whileProcName <- newName "loop'"
-    whileProcCall <- evalFunctionCallWithName (scope, scope) whileProcName scope -- the empty list here shouldn't be empty.
+    whileProcName <- newName "loop''"
+    whileProcCall <- evalFunctionCallWithName (scope, scope) whileProcName scope
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
-    err <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
+    err           <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
     -- The err will be thrown in a do block that should return a value, so we actually
     -- have to return a bogus value after we throw the error in order to please Haskell.
-    let errStmt = NoBindS $ AppE err (tupP2tupE (snd env))
+    let errStmt    = NoBindS $ AppE err (tupP2tupE (snd env))
     whileIf       <- evalIfErr env fromGuard whileProcCall [errStmt]
 
-    err <- runQ [|error "From-guard in while loop was true at some point *after* the first iteration."|]
+    err           <- runQ [|error "From-guard in while loop was true at some point *after* the first iteration."|]
     -- The err will be thrown in a do block that should return a value, so we actually
     -- have to return a bogus value after we throw the error in order to please Haskell.
-    let errStmt = NoBindS $ AppE err (tupP2tupE (snd env))
+    let errStmt             = NoBindS $ AppE err (tupP2tupE (snd env))
     whileProcLoopIf        <- evalIfErr env (AppE (VarE (mkName "not")) fromGuard) whileProcCall [errStmt]
     (loopStmts, loopDecls) <- evalStmts loopStatements
     let whileProcLoopBlock  = loopStmts ++ (frst whileProcLoopIf)
@@ -346,7 +362,7 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
 evalLocalVarDec :: Env -> Variable -> Exp -> [Statement] -> Exp -> Q EvalState
 evalLocalVarDec env v@(Variable (Identifier varName) _) init body exit = do
     varPat <- varToPat v
-    tmpN <- newName "tmp'"
+    tmpN <- newName "tmp''"
     let env' = (fst env, (TupP . (:) varPat. unwrapTupleP . snd) env)
     stmts <- foldM accResult (initR env') body
     doReturn <- localVarReturnStmt env varName exit
@@ -372,7 +388,7 @@ localVarReturnStmt env varName exitCondition = do
     let tb     = DoE [NoBindS (tupP2tupE $ snd env)]
     let eb     = AppE (toE "error") errMsg
 
-    return $ NoBindS $ CondE guard tb eb    
+    return $ NoBindS $ CondE guard tb eb
 
 
 -- *** HELPERS *** ---
