@@ -44,17 +44,17 @@
 % Macros
 \newcommand{\site}[1]{\footnote{\url{#1}}}
 \newcommand{\inlinecode}[1]{\mintinline{bash}{#1}}
+\newcommand{\inlinehs}[1]{\mintinline{hs}{#1}}
 
 \newcommand{\code}[2]{
-	\begin{center}
-		\vspace{.5cm}
-		\textsc{\small #1}\\
-		\vspace{.5cm}
-	\end{center}
-	\begin{minipage}{.9\textwidth}
-		\inputminted[frame=lines,framesep=1cm,baselinestretch=.8,linenos,fontsize=\footnotesize]
-			{haskell}{code/#2.hs}
-	\end{minipage}
+ \begin{center} \textsc{\small #1} \end{center}
+ \inputminted[frame=lines,framesep=.5cm,baselinestretch=.8,linenos,fontsize=\footnotesize]
+         {haskell}{code/#2.hs}
+}
+\newcommand{\codeErr}[1]{
+ \begin{center} \textsc{\small Error} \end{center}
+ \inputminted[frame=lines,framesep=.5cm,baselinestretch=.8,fontsize=\footnotesize]
+         {bash}{code/#1_err.hs}
 }
 
 \begin{document}
@@ -141,6 +141,10 @@ In addition to compile-time guarantees, the embedded Hanus language will also in
 \section{Results}
 \label{section:results}
 
+\subsection{General workflow}
+We followed a meta-programming approach to implement our DSL embedding. The programmer writes his Janus program in the 
+\inlinehs{[|hanus|]} quasi-quoter, which then is parsed and checked for semantic errors. If the program is well-formed, the evaluator generates haskell programs corresponding to the given Janus code. In the following section, we give a detailed description of all these parts.
+
 \subsection{Parser}
 We implemented the parser for Hanus using uu-parsinglib\footnote{\url{https://hackage.haskell.org/package/uu-parsinglib}}. This allowed us to write a parser using parser combinators and get error correction. However, the error correction was not very reliable and can cause that the program does not terminate if there is a syntactic error. We expect that this is caused by the way that we parse Haskell expressions.
 
@@ -180,15 +184,58 @@ We expect that this does not play well with the error correction mechanisms of u
     A field index is an indexer used to point to a specified field of a data type. One example, implemented in \textit{Hanus}, is the type \textit{BinaryTree}. This \textit{BinaryTree} is either a \textit{Node} with a value and two sub trees or a \textit{Leaf}. The \textit{DefaultValue} of a \textit{BinaryTree} is a \textit{Leaf}. This \textit{BinaryTree} is not very useful unless there would be an option to access the values or children of the tree. This is where \textit{FieldIndexer} is used. To define a \textit{FieldIndexer}, a user should specify both a $get$ and a $set$ function. The $get$ function is used to retrieve the value from the data structure and the $set$ function is used insert the value in the data structure, possibly removing the data that was there before. This is not a problem for reversibility, because this $set$ and $get$ are never directly called by the program at runtime. They are used by the operators, retrieving the value, updating it and returning the updated value using the $set$ function. A few examples of the usage of a \textit{Field Indexer} include $x.nodeValue$ and $x.leftChild$. Each of these fields can then be used as a variable with any operator that support the type of the field.  The details of the implementation of \textit{BinaryTree} can be found in the code repository in the module $StdLib.BinaryTree$.
     \paragraph{Array indexer}   
     Array indexer have the same purpose as Field Indexer in that they are used to access specific parts of the data structure. The difference between the two indexers is that an \textit{ArrayIndexer} has one more variable. This variable is used to access a specific part of the data structure that is not necessary known at compile time. The most notable example is the default way access items in an array: $x[i]$ where $x$ is an array and $i$ is the key that points to a position in array $x$. In some languages, there is a restriction that the key has to be an integer. This restriction does not exists in \textit{Hanus}. A user is free to use any type as a key. For the definition, the \textit{ArrayIndexer} also requires two functions, one $get$ function and one $set$ function. The $get$ function requires the variable that needs to be accessed and a key that points to an item in the data structure. The $set$ function requires a function that receives the data structure, the key of the variable in the data structure and the new value that needs to be inserted in the data structure. In \textit{Hanus}, $ArrayIndexer$ is used to implement arrays. This indexer can also be used for structures like maps, lists and similar structures.   
+
+\subsection{Static Guarantees}
+
+\subsubsection{Syntactic Checking}
+Our TH approach of embedding requires us to eventually write a parser for Janus, which will run at compile-time, during the first compilation \textit{stage}, where our meta-programs are executed in order to produce the final Haskell programs. Therefore, errors encountered during parsing Janus syntax will be reported at compile-time as well.
+
+As an example, the code fragment of our DSL on the left will result in the error on the right:
+
+\hspace{1cm}
+\begin{minipage}{.3\textwidth}
+\code{Code}{syntax}
+\end{minipage}
+\hspace{1cm}
+\begin{minipage}{.5\textwidth}
+\codeErr{syntax}
+\end{minipage}
+\hspace{1cm}
+
+\subsubsection{Semantic Checking (Haskell-side)}
+By embedding Janus in Haskell, we have inherited powerful static semantics from the host language. Therefore, we do not have to implement a lot of semantic checks ourselves, but rather get them for free! As an example, we do not implement errors for using undefined variables, since the generated Haskell programs will be ill-formed and result in a GHC compile-time error. A more interesting example appears in the case of \textit{anti-quoatation}, where the injected Haskell expression has a type-mismatch and we propagate the error GHC will give in this case, as shown in the example below:
+\\[10pt]
+\hspace*{.05\textwidth}
+\begin{minipage}{.4\textwidth}
+\code{Code}{semH}
+\end{minipage}
+\hspace*{.05\textwidth}
+\begin{minipage}{.5\textwidth}
+\codeErr{semH}
+\end{minipage}
+
+\subsubsection{Semantic Checking (Janus-side)}
+By using \textit{Template Haskell} and \textit{Quasi-Quotation} in our approach, we have achieved additional Janus-specific static guarantees. This is possible via insertion of semantic checks during the first compilation \textit{stage}.
+
+One such check is that there exists at least one main procedure, which is the entry point of execution. A more interesting check is that of proper variable usage on the right-hand side of an assignment operator, namely that it should not contain the right-hand variable being mutated. The following example demonstrates this check:
+
+%\hspace*{.05\textwidth}
+\begin{minipage}{.3\textwidth}
+\code{Code}{semJ}
+\end{minipage}
+\hspace*{.2\textwidth}
+\begin{minipage}{.5\textwidth}
+\codeErr{semJ}
+\end{minipage}
     
-\subsection{Examples of \textit{Hanus}} 
-    
-\code{Division}{divide} \\\\
+
+\subsection{Examples of \textit{Hanus}}     
+\code{Division}{divide}
 The division example is a simple example of what \textit{Hanus} is capable of. This function computes the division and the remainder. When the variable is called in reverse, it can be used to compute the multiplication. Because the \textit{main} procedure calls divide and then uncalls divide with the same arguments, main acts as the identity function for most parameters. With this program, it is possible to explain the loop in \textit{Hanus}. The loop has a precondition and a postcondition and a body. The precondition has to be $True$ only the first iteration and the postcondition has to be $True$ only the last iteration. When the loop is reversed, precondition and postcondition change places. 
     
-\code{Fibonacci}{fibonacci} \\\\
+\code{Fibonacci}{fibonacci}
 The Fibonacci example has three parameters. The first two are two sequential Fibonacci numbers, the third parameters $n$ represents the $n$th parameter. This function can normally be used to calculate the $n$th Fibonacci number. The reverse of this program is, given two sequential Fibonacci numbers, what is the position of the first Fibonacci number when all Fibonacci numbers are listed. For example, $x1 = 5$ and $x2 = 8$ return $n=4$ because 5 is the fourth Fibonacci number, starting on a list with 0. This example also includes an if-statement. This if-statement differs from regular if-statements with the addition of the postcondition. This postcondition must be $True$ if the if-branch was executed and has to be $False$ if the else-branch was executed. The reverse of the if-statement is the reverse of both bodies and the reversal of the precondition and the postcondition.
-\code{Run length encoding}{run-length-encoding}\\\\
+\code{Run length encoding}{run-length-encoding}
 The run length encoding example shows the usage of a more complicated program that uses two nested loops and a stack to store the data. The program compresses the data using run-length encoding. An example is the array $\lbrack 12, 12, 12, 13, 13 \rbrack$, which gets converted to the array $\lbrack 2, 13, 3, 12 \rbrack$. This is an example with a very useful reverse. A user has only to provide the encoder for such a compression and by uncalling the encode procedure, providing the compressed data, the original data is returned.
 
     \subsection{Evaluation}
