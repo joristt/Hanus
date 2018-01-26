@@ -271,6 +271,8 @@ let a = temp + 1
 let !irrelevant = trace a 0
 \end{minted}
 
+If the user has not imported \inlinecode{Debug.Trace} but \emph{does} try to use the \#\inlinecode{log} statement, the Eval module will throw an error, saying that they need to import \inlinecode{Debug.Trace}. A problem with logging is that it can cause a change in behaviour of the Hanus program in rare cases, for example if the user tries to log a variable that has a value of $1/0$ but that is not used anywhere. Without the logging, it would be completely ignored by Haskell, which is a nice feature. However, as soon as the user starts to log the variable, the program will start to throw errors. This could be solved by using the \inlinecode{-XStrict} language extension, forcing the entire Hanus program to be evaluated strictly.
+
 \subsubsection{If statements}
 The conversion of \texttt{if} statements to an equivalent Haskell representation is rather straightforward, since Haskell includes a built-in \texttt{if then else} construct. The conversion can be done by simply generating \texttt{do} blocks for both branches, wrapping them in an \texttt{if then else} construct, and updating the program state with the resulting expression. Since the guard in Janus is in fact already a Haskell expression, it can be transferred directly to the generated \texttt{if then else} expression. 
 
@@ -338,6 +340,17 @@ let t = tmp1
 In order to create a functioning program, the evaluator generates quite a lot of helper variables and functions. Names provided by the input program are kept the same (GHC will resolve them for us). In all other cases, Template Haskell provides the function \texttt{newName} that generates a name that is guaranteed to be unique inside the current scope. 
 
 The usage of this method was not always free of problems unfortunately, since GHC would consider the names of generated helper functions to be out of scope in some cases, even though their declaration would be spliced at top level. The exact source of this problem remains unclear, but we were able to circumvent this issue by moving the declaration of any helper functions to a where clause attached to the function in which they are needed. 
+
+\subsubsection{Runtime errors}
+Hanus programs can throw errors at runtime that cannot be predicted at compile time without evaluating the actual Haskell program, e.g. checking if the local variable has the value specified in the delocal block by the time that delocal block is executed. Therefore, the Eval module embeds errors in the Haskell program structure. These error messages are very detailed in certain cases, to make it easier for the programmer to find out what is going on and where. After all, all information about line numbers or exact structure is lost during compilation. All in all, the previously mentioned example of checking the delocal block will roughly be compiled to the following (note that this is code is simplified):
+
+\begin{minted}{Haskell}
+    if x /= expected_value then
+        error "variable x has value '" ++ (show x) ++ "' although it should " ++
+              "have had the value '" ++ (show expected_value) ++ "'."
+    else
+        continue
+\end{minted}
     
     \subsection{Goal/planning adjustments}
 \section{Reflection}
