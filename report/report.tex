@@ -1,3 +1,4 @@
+% !TeX spellcheck = en_US
 \documentclass[12pt,a4paper]{article}
 
 \usepackage{minted}
@@ -9,6 +10,8 @@
 \usepackage{fullpage}
 \usepackage{hyperref}
 
+\usepackage{amsmath,amsthm,amssymb,latexsym}
+
 % Colors
 \usepackage{xcolor, color, colortbl}
 \colorlet{gray}{gray!70}
@@ -19,6 +22,21 @@
 \definecolor{linkcolour}{rgb}{0,0.2,0.6}
 \hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
 
+\usepackage{titlesec}
+
+\setcounter{secnumdepth}{4}
+
+
+\usepackage{minted}
+%\usemintedstyle{friendly}
+\usemintedstyle{tango}
+%\usemintedstyle{monokai}
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
 \title{\textbf{Project Report \\ \small{Concepts of Program Design}}}
 \author{\small{Joris ten Tusscher, Joris Burgers, Ivo Gabe de Wolff, Cas van der Rest, Orestis Melkonian}}
 \date{}
@@ -27,28 +45,162 @@
 \newcommand{\site}[1]{\footnote{\url{#1}}}
 \newcommand{\inlinecode}[1]{\mintinline{bash}{#1}}
 
+\newcommand{\code}[2]{
+	\begin{center}
+		\vspace{.5cm}
+		\textsc{\small #1}\\
+		\vspace{.5cm}
+	\end{center}
+	\begin{minipage}{.9\textwidth}
+		\inputminted[frame=lines,framesep=1cm,baselinestretch=.8,linenos,fontsize=\footnotesize]
+			{haskell}{code/#2.hs}
+	\end{minipage}
+}
 
 \begin{document}
 \maketitle
 
+
 \section{Problem}
+\label{section:problem}
     \subsection{Experiment}
-    \subsection{Janus - Reversible Computation}
+In Janus, a time-reversible programming languages, all procedures can be executed forward and backward. This gives a limitation on the programs that a programmer can write and makes it thus hard to write certain applications. That gave us the following research question for our experiment:
+
+\begin{displayquote}
+	\textit{Can we improve the usability of Janus by implementing it as a DSL embedded in Haskell?}
+\end{displayquote}
+
+\noindent In order to be able to answer this question, we attempted to improve Janus in several ways, mainly by incorporating various elements of the host language (Haskell) in the DSL, as well as the addition of certain language constructs. We implemented certain algorithms in both our DSL and standard Janus and compared the implementations with respect to various metrics, such as performance and readability. 
+
+In this report, we will describe our implementation of the Janus as a DSL in Haskell, which we called \textit{Hanus}. We will start by giving some context on Janus and reversible languages in general in section \ref{section:problem}. We will describe the extensions and expected outcome in section \ref{section:methodology}. We describe on the results of our DSL in section \ref{section:results} and reflect on the process in section \ref{section:reflect}.
+
+\subsection{Janus}
+We implemented the reversible programming language Janus as a DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} were used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the \texttt{READ} and \texttt{WRITE} statements will not be valid statements
+
+\subsection{Extensions}
+We added various extensions, mainly focused on improving the usability of our DSL:
+
+\begin{itemize}
+	\item 
+	Local variable blocks
+	\item
+	Function arguments
+	\item
+	Arbitrary types
+\end{itemize}
+
+Some Janus features, such as the stack and arrays will not be implemented directly into the DSL, but are available through predefined functions in the host language.
+
+\subsection{$r$-Turing completeness}
+Given that only reversible programs can be written in a reversible language, it can only compute injective functions. This means that it cannot simulate any Turing machine, as Turing machines can compute non-injective functions. Thus, reversible languages are not Turing complete \cite{axelsen11}.
+
+Axelsen e.a. \cite{axelsen11} proposed the notion of reversible Turing completeness ($r$-Turing completeness), meaning that the language can simulate any reversible Turing machine (RTM). To define this, we must first know the concepts of forward and backward determinism.
+
+\begin{itemize}
+	\item A Turing machine is \textit{forward deterministic} if from any state and tape, only one transition to a new state and tape exists.
+	\item Similarly, a Turing machine is \textit{backward deterministic} if given any state and tape, only one transition that leads to this state exists.
+\end{itemize}
+
+A reversible Turing machine is defined as a forward and backward deterministic Turing machine.
+
+\subsubsection{Convert Turing machines}
+If we want to compute some non-injective function $f(x)$, we can create an injective function $x \to (f(x), x)$. As shown by \cite{axelsen11}, if $f(x)$ is computable by some Turing machine, then there exists a reversible Turing machine which computes $x \to (f(x), x)$ which uses three memory tapes instead of one. This three-tape reversible Turing machine can be converted to a normal single tape reversible Turing machine.
+
+Given a computable function $f$, we can thus write a program in a reversible language that computes $x \to (f(x), x)$. However, this might use more memory and time than in a non-reversible language.
+
+In Hanus, this trick can be used with only a minimal amount of additional memory and time. For simplicity, assume that $f$ is a function from integers to integers. When function $f$ is implemented in Haskell, a Hanus procedure that computes $(0, x) \to (f(x), x)$ can be created as follows.
+
+\begin{minted}{haskell}
+procedure g(y :: Int, x :: Int) {
+  y += f x;
+}
+\end{minted}
+
 \section{Methodology}
+\label{section:methodology}
+\subsection{DSL Embedding}
+\label{subsec:template-haskell}
+In order to embed Janus as a DSL in Haskell, we used the \textit{TemplateHaskell}(TH)\cite{sheard02} and \textit{QuasiQuotation}\cite{mainland07} GHC extensions, which extend Haskell with compile-time meta-programming capabilities. This allows us to perform static checking (i.e. syntactic and semantic checking), code generation and embedding Haskell expressions in Janus at compile-time.
+
+On the static checking side of things, TH allowed us to perform the following at compile-time:
+\begin{itemize}
+    \item{Parsing}
+    \item{Checking that programs are well-typed}
+    \item{Verifying proper variable usage}
+    \item{Embedding of Haskell expressions}
+\end{itemize}
+
+Specifically, Hanus programs can be written as \textit{quasi-quote} strings inside a Haskell source file, which will eventually transfer control to a \textit{quasi quoter}, that will parse and statically check desired properties of the given program, as well as compile the domain-specific syntax to Haskell code.
+
+For instance, Hanus statements of the form \textbf{id} $\langle\textsc{reversibleOp}\rangle$ \textbf{expr} require that the identifier on the left-hand side does not occur in the expression on the right-hand side. This is easily achieved in TH via the process of \textit{reification}, which allows us to query compile-time information (e.g. a variable's type and identifier) while running our meta-programs.
+
+In addition to compile-time guarantees, the embedded Hanus language will also inherit powerful features, already existent in Haskell (e.g. modularity via Haskell's modules).
+
     \subsection{Expected outcome}
     \subsection{Planning}
 \section{Results}
-    \subsection{Achievements}
-        \subsubsection{Evaluation}
+\label{section:results}
+
+\subsection{Parser}
+We implemented the parser for Hanus using uu-parsinglib\footnote{\url{https://hackage.haskell.org/package/uu-parsinglib}}. This allowed us to write a parser using parser combinators and get error correction. However, the error correction was not very reliable and can cause that the program does not terminate if there is a syntactic error. We expect that this is caused by the way that we parse Haskell expressions.
+
+\subsubsection{Parsing Haskell expressions and types}
+The syntax for our DSL supports Haskell expressions and types. We use the haskell-src-meta package\footnote{\url{https://hackage.haskell.org/package/haskell-src-meta}} to parse those. However, to use this package, we must know where a Haskell expression or type ends. Consider an assignment of the form \textit{x += expr;}, where \texttt{expr} is some expression. We will find the first occurrence of a semicolon in the source string and try to parse this section of the source. If the source code is \texttt{x += length "a;b";}, it will try to parse \texttt{length "a} as a Haskell expression. This will fail, and the parser will try to find the next occurrence of a semicolon. Thus, it will try to parse \texttt{length "a;b"}, which does parse.
+
+We expect that this does not play well with the error correction mechanisms of uu-parsinglib and cause that the parser does not terminate on invalid inputs. However, on some inputs the error correction does correct the input.
+
+    \subsubsection{Semantics of operators}  
+    In Hanus, a user is able to define their own types and operators. These operators can be defined for their own types or for types that are already defined in Haskell. In Hanus, there are already a number of operators and types defined that users can use. 
+    \paragraph{Definition of arbitrary types}
+    In a reversible language, any variable should have a default value with which a variable is initialised before the \textit{main} procedure is run. The original \textit{Janus} specification only allowed for integers. For integers the default value of 0 is chosen. In Hanus, for any number of the \textit{Haskell Num} class, the default is also 0. There are also a number of other types predefined in Hanus. Their defaults are implemented as follows:
+    \begin{itemize}
+        \item Bool: \textit{False}
+        \item $\lbrack\alpha\rbrack$ : \textit{[]}
+        \item Map $\alpha$ $\beta$: \textit{Data.Map.empty}
+        \item Maybe $\alpha$: \textit{Nothing}
+    \end{itemize}
+    Any user that wants to define their own type, has to implement an instance of \textit{DefaultValue} type class for the type they want to use as a \textit{Hanus} variable. It is possible to implement a \textit{DefaultValue} for a type without implementing any operators for that type. A variable of this type can not be changed in this case, except if the type also implements the type class of another type. An example of this would be the class \textit{Real}. Because any \textit{Real} in Haskell has to be also a \textit{Num}, all operators defined on \textit{Num} could also be used on a \textit{Real}.
+    
+    \paragraph{Definition of operators}
+
+    In \textit{Hanus}, operators can be defined to manipulate variables.  These operators always come in pairs, one operator for the forward manipulation and one operator for the reverse manipulation. There is no restriction that these operators should be different. For example, the reverse of the negation operator is the negation operator. However, in most circumstances, there operator are two different manipulations. In the original \textit{Janus}, there were 4 manipulation operators defined. There are the operators \texttt{+=}, \texttt{-=}, \texttt{\textasciicircum =} and $\Leftrightarrow$. All of these operators only work on integers, as the original \textit{Janus} does not support any other types. The semantics are as follows:
+    \begin{itemize}
+        \item \texttt{x+=e} adds any arbitrary expression \texttt{e} to the variable \texttt{x}. The reverse of this statement is \texttt{x-=e}. As long as the variable on the right hand side of the operator is not used in the expression $e$, $e$ can by any computation that results in an integer. The expression \texttt{x+=x} is therefore not allowed, because this statement does not have a reverse. The constraint that the variable on the left can not occur on the right applies for all operators.
+        \item \texttt{x-=e} subtract the arbitrary expression \texttt{e} from the variable \texttt{x}. The reverse is the statement \texttt{x+=e}.
+        \item \texttt{x \textasciicircum = e} does a bitwise $xor$ with the expression \texttt{e}. This operator is its own reverse. 
+        \item \texttt{$x\Leftrightarrow y$} is the swap manipulator. This operator takes two variables and swaps their values. This operator is its own reverse. 
+    \end{itemize}
+    For a user to implement their own operator in \textit{Hanus}, they have to define their operator to be the of the type \textit{Operator}. The type \textit{Operator} is defined in \textit{Haskell} as $Operator$ $\alpha$ $\beta = Operator$ $ (\alpha \rightarrow  \beta \rightarrow  \alpha)$ $(\alpha \rightarrow  \beta \rightarrow \alpha)$. The first variable is the operator to be used in forward operation, the second variable is the reverse of the first operator. The definition of \texttt{+=} in \textit{Hanus} is \texttt{(+=) = Operator  (+) (-)}. A user can use the function \texttt{inverse} to inverse an \textit{Operator}. The definition of \texttt{-=} would become \texttt{(-=) = inverse (+=).} Other operators that are defined for the users convenience include \texttt{\textasciicircum =}, swap, push and pop on a stack. All these operators are defined in \textit{Haskell}. Any user wanting to implement their own operators have to define these in \textit{Haskell}, as their is no way to define these in \textit{Hanus}.
+
+    \paragraph{Guarantee of reversibility}
+    The \textit{Operator} type does not guarantee reversibility. This means that there is no check that if a user specifies two manipulations $m_1$ and $m_2$ that $(x \; m_1 \; e) \; m_2 \; e = x$ holds for every variable $x$ and every expression $e$. It is possible that the user defines \texttt{ (*=) = Operator (*) (+)}. It should be clear that this operator is incorrect, because the reverse of multiplication is not addition. However, \textit{Hanus} will not detect such a mistake and will run a program containing this code without problem. Therefore, a user that defines their own operator, should be careful to make sure that every operator they define is indeed reversible in every situation. 
+    \subsubsection{Indexers}    
+    Indexer are functions that are used to access specific fields in a data structure. These data structures are are implemented in \textit{Haskell} using the \textit{DefaultValue} type.
+    \paragraph{Field indexer}
+    A field index is an indexer used to point to a specified field of a data type. One example, implemented in \textit{Hanus}, is the type \textit{BinaryTree}. This \textit{BinaryTree} is either a \textit{Node} with a value and two sub trees or a \textit{Leaf}. The \textit{DefaultValue} of a \textit{BinaryTree} is a \textit{Leaf}. This \textit{BinaryTree} is not very useful unless there would be an option to access the values or children of the tree. This is where \textit{FieldIndexer} is used. To define a \textit{FieldIndexer}, a user should specify both a $get$ and a $set$ function. The $get$ function is used to retrieve the value from the data structure and the $set$ function is used insert the value in the data structure, possibly removing the data that was there before. This is not a problem for reversibility, because this $set$ and $get$ are never directly called by the program at runtime. They are used by the operators, retrieving the value, updating it and returning the updated value using the $set$ function. A few examples of the usage of a \textit{Field Indexer} include $x.nodeValue$ and $x.leftChild$. Each of these fields can then be used as a variable with any operator that support the type of the field.  The details of the implementation of \textit{BinaryTree} can be found in the code repository in the module $StdLib.BinaryTree$.
+    \paragraph{Array indexer}   
+    Array indexer have the same purpose as Field Indexer in that they are used to access specific parts of the data structure. The difference between the two indexers is that an \textit{ArrayIndexer} has one more variable. This variable is used to access a specific part of the data structure that is not necessary known at compile time. The most notable example is the default way access items in an array: $x[i]$ where $x$ is an array and $i$ is the key that points to a position in array $x$. In some languages, there is a restriction that the key has to be an integer. This restriction does not exists in \textit{Hanus}. A user is free to use any type as a key. For the definition, the \textit{ArrayIndexer} also requires two functions, one $get$ function and one $set$ function. The $get$ function requires the variable that needs to be accessed and a key that points to an item in the data structure. The $set$ function requires a function that receives the data structure, the key of the variable in the data structure and the new value that needs to be inserted in the data structure. In \textit{Hanus}, $ArrayIndexer$ is used to implement arrays. This indexer can also be used for structures like maps, lists and similar structures.   
+    
+\subsection{Examples of \textit{Hanus}} 
+    
+\code{Division}{divide} \\\\
+The division example is a simple example of what \textit{Hanus} is capable of. This function computes the division and the remainder. When the variable is called in reverse, it can be used to compute the multiplication. Because the \textit{main} procedure calls divide and then uncalls divide with the same arguments, main acts as the identity function for most parameters. With this program, it is possible to explain the loop in \textit{Hanus}. The loop has a precondition and a postcondition and a body. The precondition has to be $True$ only the first iteration and the postcondition has to be $True$ only the last iteration. When the loop is reversed, precondition and postcondition change places. 
+    
+\code{Fibonacci}{fibonacci} \\\\
+The Fibonacci example has three parameters. The first two are two sequential Fibonacci numbers, the third parameters $n$ represents the $n$th parameter. This function can normally be used to calculate the $n$th Fibonacci number. The reverse of this program is, given two sequential Fibonacci numbers, what is the position of the first Fibonacci number when all Fibonacci numbers are listed. For example, $x1 = 5$ and $x2 = 8$ return $n=4$ because 5 is the fourth Fibonacci number, starting on a list with 0. This example also includes an if-statement. This if-statement differs from regular if-statements with the addition of the postcondition. This postcondition must be $True$ if the if-branch was executed and has to be $False$ if the else-branch was executed. The reverse of the if-statement is the reverse of both bodies and the reversal of the precondition and the postcondition.
+\code{Run length encoding}{run-length-encoding}\\\\
+The run length encoding example shows the usage of a more complicated program that uses two nested loops and a stack to store the data. The program compresses the data using run-length encoding. An example is the array $\lbrack 12, 12, 12, 13, 13 \rbrack$, which gets converted to the array $\lbrack 2, 13, 3, 12 \rbrack$. This is an example with a very useful reverse. A user has only to provide the encoder for such a compression and by uncalling the encode procedure, providing the compressed data, the original data is returned.
+
+    \subsection{Evaluation}
         \label{sec-eval}
             An important part of Hanus is the eval module. Eval is responsible for the actual Hanus compilation: it takes a Hanus AST and compiles it to Haskell functions. In this section, the chosen compilation tactic for some of the more important or interesting types of the Hanus AST will be discussed.
 
-\subsubsection{General Approach}
+\subsubsection{General approach}
 The general task of the evaluator is to convert a provided Janus program to a collection of top level declarations that can be spliced by the user and run just like regular Haskell code. The main challenge lies in the fact that Janus is an imperative language with mutable global state, while Haskell is neither imperative, nor does it have any sort of global state. 
 
 This problem can be solved by observing that a statement in an imperative language can in principle be viewed as a function that, given the current state of the program as its input, yields a new state as the result of executing the statement. All Hanus statements (with the exception of the \emph{log} statement) may only affect the variables that are in scope at that point, so we consider the program state for any statement to be the collection of variables that is in scope when executing that statement. 
 
-\subsubsection{Procedure Declarations}
+\subsubsection{Procedure declarations}
 Every Hanus procedure declaration is compiled to a Haskell functions, consisting of a single do-statement, that performs a computation that is equivalent to that intended by the Hanus procedure. Every Hanus statement in a procedure is converted to one, or sometimes more than one statement in the Haskell do block. Since a procedure can be called to run it regularly and uncalled to run it in reverse, every Hanus procedure $p$ is compiled to not one but two Haskell functions: a function $p$ that does exactly what Hanus procedure $p$ should do, and a function $p'$ that is the inverse of $p$. Name conflicts as a result of this convention are impossible since the Hanus parser does not accept the $'$ character as part of a procedure identifier.
 
 \subsubsection{Global variables}
@@ -81,7 +233,7 @@ y a b = do
     (a, b)
 \end{minted}
 
-\subsubsection{Local Variables}
+\subsubsection{Local variables}
 The other type of variable is the local variable. Local variables are declared in a \emph{local} statement with a name, type and default value, and undeclared in an \emph{unlocal} statement with a final value. By the time the unlocal statement is being executed, the local variable should have the specified final value. Note however, that the final value can also be a non-literal expression. The unlocal block is there to function as initial value for the local variable if the procedure that it is part of is being uncalled, i.e. reversed: in that case, the local variable needs what is declared as its final value as its initial value, and vice versa. By the time the unlocal block is reached, an assertion is executed to make sure that the procedure can safely be reverted without giving the local variable an incorrect initial value. An unlocal block is implemented as a \inlinecode{let-in} Haskell statement, because this automatically takes care of removing a local variable from scope after the unlocal line. To keep it simple, nesting multiple local blocks with identical variable names is impossible, and local variables can never have the name of a global variable. The let-in block again causes scoping issues, for example here:
             
 \begin{minted}{haskell}
@@ -109,7 +261,7 @@ x a = do
 
 Local variables can be passed around to functions, since they are handled as reference types. An example of a procedure that takes local variables is \inlinecode{procedure x(n :: Int)}. In order to be able to correctly update local variables, they too were made part of the copy restore system, meaning that that the Haskell equivalent of procedure x takes all global arguments as input, plus the local variables \inlinecode{n}, and that the Haskell function returns them all in a single tuple. Since local variables cannot shadow global variables, and since global variables cannot be explicitly passed to procedures, duplicate naming issues will never occur.
 
-\subsubsection{Log Statement}
+\subsubsection{Log statement}
 A special type of Hanus statement is the \textbf{\#log} statement. It uses the \inlinecode{Debug.Trace} Haskell module to print the current value of the specified variables. However, Haskell is a lazy language, so a sequence of Hanus statements like \#\inlinecode{log a; a += 1; }\#\inlinecode{log a;} will write "1" and then "0" to the console. Therefore, \#\inlinecode{log} statements are strictly evaluated using a bang pattern, making the Haskell code look something like this:
 
 \begin{minted}{haskell}
@@ -119,16 +271,16 @@ let a = temp + 1
 let !irrelevant = trace a 0
 \end{minted}
 
-\subsubsection{If Statements}
+\subsubsection{If statements}
 The conversion of \texttt{if} statements to an equivalent Haskell representation is rather straightforward, since Haskell includes a built-in \texttt{if then else} construct. The conversion can be done by simply generating \texttt{do} blocks for both branches, wrapping them in an \texttt{if then else} construct, and updating the program state with the resulting expression. Since the guard in Janus is in fact already a Haskell expression, it can be transferred directly to the generated \texttt{if then else} expression. 
 
-\subsubsection{Loops Statements}
+\subsubsection{Loop statements}
 Compiling the \emph{loop-until statement} to Haskell was a particularly challenging task. A single while-iteration is simple enough: just execute the body of the loop and use the by now well known restore mechanism to update values in the outer scope. Two loops is simple too: just nest the do-blocks and let them all return the restore tuple on the last line. Same goes for $n$ loops. However, a challenge arises as soon as $n$ is unknown at compile time, because how should the compiler know how many loop bodies it should nest? The obvious solution to this problem is to compile a loop a recursive function that uses the copy-restore mechanism and keeps calling itself at runtime until its guard evaluates to false. The actual loop statement can then be replaced with a simple call to the loop function. However, different loops can be placed in different procedures that can have different local variables, so the input arguments for the Haskell loop function needs to depend on the particular while loop and its scope. This problem can be solved by generating a unique loop function for every loop declaration. However, the problem is that, at the time the loop was being implemented, no scope log was actively being kept during the code generation process, meaning that the Eval module could not actually know what the signature of the recursive loop function had to become, nor could it know how it could correctly call that Haskell function. Therefore, it was necessary to keep track of the scope everywhere in the Eval module, meaning that every time a local variable was being declared or undeclared, the scope had to be updated. By doing this, whenever Eval encountered a loop block in the AST, it knew exactly what the function signature had to be of the loop function it had to generate, what the type of the return tuple of that function had to be, and what the function call had to look like that had to function as substitute for the original loop block.
 
-\subsubsection{Entry Point Generation}
+\subsubsection{Entry point generation}
 For convenience of the end user, the provided QuasiQuoters provide an extra generated function \texttt{run} that calls the generated \texttt{main} function. Simply calling the \texttt{main} function itself would also be perfectly possible, but since it is actually a function with type \texttt{State -> State}, the programmer would have to provide an initial state for the program. Since all variables in Hanus are assumed to have a defined default value, this initial state is implicit. The provided entry point generates this initial state from the types of all global variables and calls the \texttt{main} function.
 
-\subsubsection{Array and Field Indexers}
+\subsubsection{Array and field indexers}
 Hanus allows for the user to define field indexers for any data type or to make any data type indexable. Running the Hanus program below would result in a value of \texttt{(4,2)} for \texttt{t} and \texttt{["foo" => 1, "bar" => 2]} for \texttt{a}. 
 \begin{minted}{Haskell}
 t :: (Int, Int);
