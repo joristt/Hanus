@@ -111,12 +111,12 @@ statePattern varDecs = mapM toPat varDecs
 evalProcedure :: [Pat] -> Declaration -> Q ([Dec])
 evalProcedure globalArgs p@(Procedure (Identifier n) vs b) = do
     let p' = Procedure (Identifier (invert n)) vs (reverseBlock b)
-    (pDecl,  hs1) <- actualEvalProcedure globalArgs $ p
-    (pDecl', hs2) <- actualEvalProcedure globalArgs $ p'
-    return $ pDecl : pDecl' : hs1 ++ hs2
+    pDecl  <- actualEvalProcedure globalArgs $ p
+    pDecl' <- actualEvalProcedure globalArgs $ p'
+    return [pDecl, pDecl']
 
 -- Evaluate a procedure to it's corresponding TH representation
-actualEvalProcedure :: [Pat] -> Declaration -> Q (Dec, [Dec])
+actualEvalProcedure :: [Pat] -> Declaration -> Q Dec
 actualEvalProcedure globalArgs (Procedure n vs b) = do
     let name = case n of 
                    (Identifier "main") -> nameId $ Identifier "hanus_main"
@@ -124,7 +124,7 @@ actualEvalProcedure globalArgs (Procedure n vs b) = do
     let inputArgs = map (\(Variable (Identifier n) t) -> SigP (VarP (mkName n)) t) vs
     let pattern = TupP globalArgs
     body <- evalProcedureBody b (pattern, TupP (globalArgs ++ inputArgs))
-    return (FunD name [Clause (globalArgs ++ inputArgs) (fst body) []], snd body)
+    return $ FunD name [Clause (globalArgs ++ inputArgs) (fst body) (snd body)]
 
 -- Evaluate a procedure to it's corresponding TH representation
 -- This function is specifically used as a part of evalWhile.
@@ -133,7 +133,7 @@ actualEvalProcedure' name scopeTup@(TupP scope) stmts = do
     body <- evalProcedureBody' stmts scopeTup
     return $ FunD name [Clause scope body []]
 
--- Evaluates a procedure body (== Block (note that type Block = [Statement]))
+-- Evaluates a procedure body (== Block (note that type Block = [Statement])) 
 -- This function is specifically used as a part of evalWhile.
 evalProcedureBody' :: [Stmt] -> Pat -> Q Body
 evalProcedureBody' stmts entireScope = do
@@ -175,7 +175,7 @@ evalLog env xs = do
     throwLogExceptionIfNecessary
     -- We take the tail because the first Exp is a separator.
     let logUpdateStmts = ListE $ tail $ evalLogUpdate xs
-    tmpN <- newName "tmp"
+    tmpN <- newName "tmp'"
     let concatedList = (AppE (toE "concat") logUpdateStmts)
     let zero = LitE $ IntegerL 0
     let traceExp  = AppE (AppE (toE "trace") concatedList) zero
@@ -227,13 +227,13 @@ evalAssignment env direction op lhss exp = do
             case lhs of 
               (LHSIdentifier ident) -> return $ [letStmt (VarP $ nameId ident) (VarE vname)]
               (LHSArray lhs exp)    -> do
-                tmpN <- newName "tmp"
+                tmpN <- newName "tmp'"
                 x <- argE lhs
                 let res = letStmt (VarP tmpN) (AppE (AppE (AppE ((VarE . mkName) "indexerSet") x) exp) (VarE vname))
                 return [res, letStmt (lhsP lhs) (VarE tmpN)]
               (LHSField obj field) -> do
                 set <- [|(\(FieldIndexer _ s) -> s)|]
-                tmpN <- newName "tmp"
+                tmpN <- newName "tmp'"
                 x <- argE obj
                 let res = letStmt (VarP tmpN) (AppE (AppE (AppE set (VarE $ nameId field)) x) (VarE vname))
                 return [res, letStmt (lhsP lhs) (VarE tmpN)]
@@ -245,7 +245,7 @@ evalAssignment env direction op lhss exp = do
 -- Evaluate a janus procedure call to it's corresponding TH representation
 evalFunctionCall :: Env -> String -> [LHS] -> Q EvalState
 evalFunctionCall env@(TupP globalsList, _) name args = do
-    tmpN <- newName "tmp"
+    tmpN <- newName "tmp'"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
@@ -257,7 +257,7 @@ evalFunctionCall env@(TupP globalsList, _) name args = do
 
 evalFunctionCallWithName :: Env -> Name -> Pat -> Q EvalState
 evalFunctionCallWithName env name (TupP args) = do
-    tmpN <- newName "tmp"
+    tmpN <- newName "tmp'"
     f <- foldM (\exp pat -> do
                     arg <- expFromVarP pat
                     return (AppE exp arg))
@@ -270,7 +270,7 @@ evalIf :: Env -> Exp -> [Statement] -> [Statement] -> Q EvalState
 evalIf env g tb eb = do
     b1   <- evalBranch tb
     b2   <- evalBranch eb
-    tmpN <- newName "tmp"
+    tmpN <- newName "tmp'"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
     return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], env)
@@ -282,7 +282,7 @@ evalIfErr :: Env -> Exp -> EvalState -> [Stmt] -> Q EvalState
 evalIfErr env g tb eb = do
     b1     <- evalBranch tb
     let b2  = DoE eb
-    tmpN   <- newName "tmp"
+    tmpN   <- newName "tmp'"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
     return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], env)
@@ -293,7 +293,7 @@ evalSingleBranchIf :: Env -> Exp -> [Stmt] -> Q EvalState
 evalSingleBranchIf env g eb = do
     b1   <- evalBranch ([], [], env)
     b2   <- evalBranch (eb, [], env)
-    tmpN <- newName "tmp"
+    tmpN <- newName "tmp'"
     let ifExp  = CondE g b1 b2
     let ifStmt = letStmt (VarP tmpN) ifExp
     return ([ifStmt, letStmt (snd env) (VarE tmpN)], [], env)
@@ -314,7 +314,7 @@ evalSingleBranchIf env g eb = do
 -}
 evalWhile :: Env -> Exp -> Exp -> [Statement] -> [Statement] -> Q EvalState
 evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatements = do
-    whileProcName <- newName "while"
+    whileProcName <- newName "loop'"
     whileProcCall <- evalFunctionCallWithName (scope, scope) whileProcName scope -- the empty list here shouldn't be empty.
     -- The while loop can only be evaluated if fromGuard is true the first time (and *only* the first time).
     err <- runQ [|error "From-guard in while loop was not true upon first evaluation."|]
@@ -327,26 +327,26 @@ evalWhile env@(TupP globals, scope) fromGuard untilGuard doStatements loopStatem
     -- The err will be thrown in a do block that should return a value, so we actually
     -- have to return a bogus value after we throw the error in order to please Haskell.
     let errStmt = NoBindS $ AppE err (tupP2tupE (snd env))
-    whileProcLoopIf       <- evalIfErr env (AppE (VarE (mkName "not")) fromGuard) whileProcCall [errStmt]
-    loopStmts             <- evalStmts loopStatements
-    let whileProcLoopBlock = loopStmts ++ (frst whileProcLoopIf)
+    whileProcLoopIf        <- evalIfErr env (AppE (VarE (mkName "not")) fromGuard) whileProcCall [errStmt]
+    (loopStmts, loopDecls) <- evalStmts loopStatements
+    let whileProcLoopBlock  = loopStmts ++ (frst whileProcLoopIf)
 
-    whileProcDoIf       <- evalSingleBranchIf env untilGuard whileProcLoopBlock
-    doStmts             <- evalStmts doStatements
-    let whileProcBlock = doStmts ++ (frst whileProcDoIf)
+    whileProcDoIf          <- evalSingleBranchIf env untilGuard whileProcLoopBlock
+    (doStmts, doDecls)     <- evalStmts doStatements
+    let whileProcBlock      = doStmts ++ (frst whileProcDoIf)
 
-    whileProcDec      <- actualEvalProcedure' whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
+    whileProcDec           <- actualEvalProcedure' whileProcName scope whileProcBlock -- the empty list here shouldn't be empty.
 
-    return (frst whileIf, [whileProcDec], env)
+    return (frst whileIf, [whileProcDec] ++ loopDecls ++ doDecls, env)
 
     where evalStmts stmts = do
               stmts <- foldM accResult (initR env) stmts
-              return $ (frst stmts)
+              return $ (frst stmts, scnd stmts)
 
 evalLocalVarDec :: Env -> Variable -> Exp -> [Statement] -> Exp -> Q EvalState
 evalLocalVarDec env v@(Variable (Identifier varName) _) init body exit = do
     varPat <- varToPat v
-    tmpN <- newName "tmp"
+    tmpN <- newName "tmp'"
     let env' = (fst env, (TupP . (:) varPat. unwrapTupleP . snd) env)
     stmts <- foldM accResult (initR env') body
     doReturn <- localVarReturnStmt env varName exit
@@ -408,6 +408,7 @@ concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
 concatMapM op = foldr f (return [])
     where f x xs = do x <- op x; if null x then xs else do xs <- xs; return $ x++xs
 
+-- Accumulator used for folding all statements in a procedure
 accResult :: EvalState -> Statement ->  Q EvalState
 accResult r stmt = do
   eval <- evalStatement (thrd r) stmt

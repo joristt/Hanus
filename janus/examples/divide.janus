@@ -1,0 +1,14 @@
+procedure divide(int x, int y, int z)
+    from x >= y && z = 0 loop
+        z += 1
+        x -= y
+    until x < y
+    
+
+procedure main()
+    int x 
+    int y
+    int z
+    x += 30
+    y += 3
+    call divide(x, y, z)
