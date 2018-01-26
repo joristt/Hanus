@@ -82,7 +82,7 @@ In Janus, a time-reversible programming languages, all procedures can be execute
 
 \noindent In order to be able to answer this question, we attempted to improve Janus in several ways, mainly by incorporating various elements of the host language (Haskell) in the DSL, as well as the addition of certain language constructs. We implemented certain algorithms in both our DSL and standard Janus and compared the implementations with respect to various metrics, such as performance and readability. 
 
-In this report, we will describe our implementation of the Janus as a DSL in Haskell, which we called \textit{Hanus}. We will start by giving some context on Janus and reversible languages in general in section \ref{section:problem}. We will describe the extensions and expected outcome in section \ref{section:methodology}. We describe the results of our DSL in section \ref{section:results} and reflect on the process in section \ref{section:reflect}.
+In this report, we will describe our implementation of Janus as a DSL in Haskell, which we called \textit{Hanus}. We will start by giving some context on Janus and reversible languages in general in section \ref{section:problem}. We will describe the extensions and expected outcome in section \ref{section:methodology}. We describe the results of our DSL in section \ref{section:results} and reflect on the process in section \ref{section:reflect}. Lastly, in section \ref{section:future} we have listed options for future work on Hanus.
 
 \subsection{Janus}
 We implemented the reversible programming language Janus as a DSL in Haskell. The syntax and semantics given by Lutz en Derby \cite{lutz82} were used. There will however be a few changes. There will be no input and output in the DSL. Therefore, the \texttt{READ} and \texttt{WRITE} statements will not be valid statements
@@ -239,7 +239,7 @@ One such check is that there exists at least one main procedure, which is the en
 \vspace*{1cm}
 \subsection{Examples of \textit{Hanus}}
 \code{Division}{divide}
-The division example is a simple example of what \textit{Hanus} is capable of. This function computes the division and the remainder. When the function is called in reverse, it can be used as multiplication. Because the \inlinecode{main} procedure calls divide and then uncalls divide with the same arguments, main acts as the identity function for most parameters. With this program, it is possible to explain the loop in \textit{Hanus}. The loop has a precondition and a postcondition and a body. The precondition has to be \inlinecode{True} only the first iteration and the postcondition has to be \inlinecode{True} only the last iteration. When the loop is reversed, precondition and postcondition change places. 
+The division example is a simple example of what \textit{Hanus} is capable of. This function computes the division and the remainder. When the function is called in reverse, it can be used as multiplication. Because the \inlinecode{main} procedure calls divide and then uncalls divide with the same arguments, main acts as the identity function. With this program, it is possible to explain the loop in \textit{Hanus}. The loop has a precondition and a postcondition and a body. The precondition has to be \inlinecode{True} only the first iteration and the postcondition has to be \inlinecode{True} only the last iteration. When the loop is reversed, precondition and postcondition change places. 
 
 \newpage    
 \code{Fibonacci}{fibonacci}
@@ -472,6 +472,7 @@ It is undeniable that choosing to embed Janus in Haskell, instead of developing 
 Nonetheless, the features we accomplished, by following such an approach, would be impossible to develop from scratch. For instance, implementing a type system, as advanced as Haskell's, would not be feasible in the given timespan. Most importantly, the ability to run arbitrary code during compilation enabled us to provide compile-time guarantees, which were one of our basic goals we hoped to accomplish.
 
 \section{Future work}
+\label{section:future}
 	The Hanus project can be extended or improved in multiple ways. Some ideas for future work on Hanus are:
         \begin{enumerate}
                 	\item Implementing proper field and array indexers, i.e. at the moment, a sequence of multiple field and array indexers is not supported
