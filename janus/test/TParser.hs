@@ -21,4 +21,7 @@ parserTests =
   -- Loop with `loop`.
   , shouldParse "procedure foo() { from x * 100 == 400 do if True then x += 1; else complement x; fi True; until x == 1000; }"
   , shouldParse "procedure foo() { call f x y; swap x y; complement x; }"
+  -- Names & operators
+  , shouldParse "procedure iHaveCapital_letters(helloThere :: Int) { someOperator helloThere; }"
+  , shouldParse "procedure foo(y :: Int) { y 😀 42; y 👉🙋 10; foo 🔥 42; }"
   ]
