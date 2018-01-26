@@ -22,16 +22,12 @@ import Debug.Trace
 
 [hanusT|
 
-    a :: Array Int Int;
-    b :: Array String Int;
+    a :: Array String Int;
 
-    procedure testmap()
+    procedure y()
     {
-        a[0] += 10;
-        a[1] += 5;
-
-        b["foo"] += 1;
-        b["bar"] += 2;
+        a["foo"] += 1;
+        a["bar"] += 2;
     }
 
 |]
@@ -39,10 +35,11 @@ import Debug.Trace
 [hanusT|
     t :: (Int, Int);
 
-    procedure testtuple()
+    procedure x()
     {
         t.first += 10;
         t.second += 100;
+        swap t.first t.second;
     }
 |]
 
