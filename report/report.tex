@@ -477,6 +477,12 @@ Due to an initial lack of tests for all possible Hanus constructs, progress on t
                 	\item Fixing the endless loop bug in the parser. Although the error correcting parser works great, it can sometimes get stuck in an endless loop if the programmer writes a program that has incorrect statements.
         \end{enumerate}
 
+	\subsection{Template Haskell: A blessing or a curse?}
+It is undeniable that choosing to embed Janus in Haskell, instead of developing a standalone version, led to some overhead in implementation time, since it is conceptually harder to write meta-programs and debugging them is a rather tedious task.
+
+Nonetheless, the features we accomplished, by following such an approach, would be impossible to develop from scratch. For instance, implementing a type system, as advanced as Haskell's, would not be feasible in the given timespan. Most importantly, the ability to run arbitrary code during compilation enabled us to provide compile-time guarantees, which were one of our basic goals we hoped to accomplish.
+
+
 \section{Appendix}
     \subsection{Repo link}
     The public repository can be found at \url{https://github.com/joristt/Hanus}.
