@@ -1,7 +1,20 @@
 % !TeX spellcheck = en_US
 \documentclass[12pt,a4paper]{article}
 
-\usepackage{minted}
+% Code navigation
+\usepackage[edges]{forest}
+\definecolor{folderbg}{RGB}{124,166,198}
+\definecolor{folderborder}{RGB}{110,144,169}
+\definecolor{foldercolor}{RGB}{124,166,198}
+\def\Size{4pt}
+\tikzset{
+  folder/.pic={
+    \filldraw[draw=folderborder,top color=folderbg!50,bottom color=folderbg]
+      (-1.05*\Size,0.2\Size+5pt) rectangle ++(.75*\Size,-0.2\Size-5pt);  
+    \filldraw[draw=folderborder,top color=folderbg!50,bottom color=folderbg]
+      (-1.15*\Size,-\Size) rectangle (1.15*\Size,\Size);
+  }
+}
 
 % Tables
 \usepackage{multicol}
@@ -10,6 +23,7 @@
 \usepackage{fullpage}
 \usepackage{hyperref}
 
+% Math
 \usepackage{amsmath,amsthm,amssymb,latexsym}
 
 % Colors
@@ -26,11 +40,9 @@
 
 \setcounter{secnumdepth}{4}
 
-
 \usepackage{minted}
-%\usemintedstyle{friendly}
-\usemintedstyle{tango}
-%\usemintedstyle{monokai}
+\usemintedstyle{friendly}
+%\usemintedstyle{tango}
 
 \titleformat{\paragraph}
 {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
@@ -229,7 +241,7 @@ One such check is that there exists at least one main procedure, which is the en
 \end{minipage}
     
 
-\subsection{Examples of \textit{Hanus}}     
+\subsection{Examples of \textit{Hanus}}
 \code{Division}{divide}
 The division example is a simple example of what \textit{Hanus} is capable of. This function computes the division and the remainder. When the variable is called in reverse, it can be used to compute the multiplication. Because the \textit{main} procedure calls divide and then uncalls divide with the same arguments, main acts as the identity function for most parameters. With this program, it is possible to explain the loop in \textit{Hanus}. The loop has a precondition and a postcondition and a body. The precondition has to be $True$ only the first iteration and the postcondition has to be $True$ only the last iteration. When the loop is reversed, precondition and postcondition change places. 
     
@@ -399,6 +411,54 @@ Hanus programs can throw errors at runtime that cannot be predicted at compile t
         continue
 \end{minted}
     
+\subsection{Benchmarking}
+To compare our Janus implementation with the extended version currently available (i.e. \textit{Jana}), we used the \textit{criterion} package, which benchmarks a given Haskell program by executing it multiple times and, using statistical methods, derives an accurate estimate of its execution time.
+
+We benchmarked the aforementioned three examples, namely division, fibonacci and run length encoding. For each one of them, we provide measurements for small and large inputs. We also measure a "tweaked" version of the program which, instead of just calling the \inlinecode{main} procedure, loops 1000 times and always uncalls \inlinecode{main} immediately after calling it. This nicely demonstrates the performance we gain by generating the reverse procedure at compile-time.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c | c | c | c|}
+\hline
+& division$_{small}$ & division$_{large}$ & division$_{loop}$ \\
+\hline
+\textbf{jana} & 72$\mu$s & 81.06$\mu$s & 17.16ms \\
+\textbf{hanus} & 22.57$\mu$s & 28.18$\mu$s & 21.08ms\\
+\hline
+\end{tabular}
+\caption{Division benchmarks}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c | c | c | c|}
+\hline
+& fib$_{small}$ & fib$_{large}$ & fib$_{loop}$ \\
+\hline
+\textbf{jana} & 80.5$\mu$s & 4,6ms & 57.73ms \\
+\textbf{hanus} & 16.9$\mu$s & 253.5$\mu$s & 21.5ms\\
+\hline
+\end{tabular}
+\caption{Fibonacci benchmarks}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c | c | c | c|}
+\hline
+& rle$_{small}$ & rle$_{large}$ & rle$_{loop}$ \\
+\hline
+\textbf{jana} & 151.1$\mu$s & 1.01ms & 1.1s \\
+\textbf{hanus} & 24.4$\mu$s & 26.56$\mu$s & 135.3ms\\
+\hline
+\end{tabular}
+\caption{Run-Length-Encoding benchmarks}
+\end{table}
+
+From the measurements above, it is apparent that \textit{Hanus} outperforms \textit{Jana} in both small and large inputs. In the case of the "tweaked" benchmark setup, if the input program is large enough, we have very large performance gains. This is due to the fact, that \textit{Jana} constructs the reverse program everytime an \inlinecode{uncall} is evaluated, leading to huge runtime overhead.
+
+Last but not least, we have not included compilation time, which is expected to be a lot more in \textit{Hanus}, due to extensive amount of computation happening at compile-time. In favor of accuracy, we have not counted the correspondent runtime overhead that \textit{Jana} introduces for parsing and semantic checking.
+
     \subsection{Goal/planning adjustments}
 \section{Reflection}
     \subsection{Good/bad surprises}
@@ -421,7 +481,61 @@ Due to an initial lack of tests for all possible Hanus constructs, progress on t
     \subsection{Repo link}
     The public repository can be found at \url{https://github.com/joristt/Hanus}.
     \subsection{Code navigation}
-
+    \forestset{is file/.style={
+    		edge path'/.expanded={},
+    		xshift = -.5cm
+    	},
+    this folder size/.style={edge path'/.expanded={%
+        ([xshift=\forestregister{folder indent}]!u.parent anchor) |- (.child anchor) pic[solid]{folder=#1}}, inner ysep=0.6*#1},
+    folder tree indent/.style={before computing xy={l=#1}},
+    folder icons/.style={folder, this folder size=#1, folder tree indent=3*#1},
+    folder icons/.default={12pt},
+}
+\begin{forest}
+  for tree={
+%    font=\ttfamily,
+    grow'=0,
+    child anchor=west,
+    parent anchor=south,
+    anchor=west,
+    calign=first,
+    inner xsep=7pt,
+    edge path={
+      \noexpand\path [draw, \forestoption{edge}]
+      (!u.south west) +(7.5pt,0) |- (.child anchor) pic {folder} \forestoption{edge label};
+    },
+    before typesetting nodes={
+      if n=1
+        {insert before={[,phantom]}}
+        {}
+    },
+    fit=band,
+    before computing xy={l=15pt},
+  }  
+[\texttt{Hanus}
+  [\texttt{proposal}: Source code for initial proposal]
+  [\texttt{intermediate}: Source code for intermediate results]
+  [\texttt{report}: Source code for this report]
+  [\texttt{poster}: Source code for poster presentation]
+  [\texttt{presentation}: Source code for Janus lecture]
+  [\texttt{janus}: 
+    [\texttt{app}: Executable's entry point]
+    [\texttt{examples}: Example programs]
+    [\texttt{src}
+    		[\texttt{Parser}: Parsers for Janus and Haskell]
+	    [\texttt{StdLib}: Hanus' Prelude]
+	    [\texttt{AST.hs}: Defines Hanus' abstract syntax tree, is file]
+	    [\texttt{Eval.hs}: Code generator from ASTs, is file]
+	    [\texttt{QQ.hs}: Quasi-quoter, is file]
+	    [\texttt{ReverseAST.hs}: AST reversal, is file]
+	    [\texttt{SemanticChecker.hs}: Semantic checks, is file]
+	]
+	[\texttt{test}: test suite]
+	[\texttt{janus.cabal}: Cabal file, is file]
+  ]
+]
+\end{forest}
+	
 \newpage
 \bibliographystyle{ieeetr}
 \bibliography{sources}
