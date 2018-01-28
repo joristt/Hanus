@@ -6,6 +6,8 @@ import Test.HUnit
 
 import Language.Haskell.TH
 import System.IO.Unsafe (unsafePerformIO)
+import Data.List (isInfixOf)
+import Data.Maybe (fromJust)
 
 import AST
 import SemanticChecker (extractVarsE, semanticCheck)
@@ -32,14 +34,14 @@ varTests =
   ]
 
 semanticTests =
-  [ semanticCheck progT1 @?= True
-  , semanticCheck progT2 @?= True
-  , semanticCheck progT3 @?= True
-  , semanticCheck progF_noMain @?= False
-  , semanticCheck progF1 @?= False
-  , semanticCheck progF2 @?= False
-  , semanticCheck progF3 @?= False
-  , semanticCheck progF4 @?= False
+  [ passed progT1
+  , passed progT2
+  , passed progT3
+  , mainFailed progF_noMain
+  , rhsFailed progF1
+  , rhsFailed progF2
+  , rhsFailed progF3
+  , mainFailed progF4
   ]
   where progT1 = Program [ Procedure main [] [asgT] ]
         progF1 = Program [ Procedure main [] [asgF1] ]
@@ -63,4 +65,7 @@ semanticTests =
           InfixE (Just $ index x') plus (Just one)
         asgF3 = LHSArray (LHSIdentifier x) (index x') .+= one
         asgT2 = LHSArray (LHSIdentifier x) (index y') .+= one
-        (.+=) e e' = Assignment "+=" [e] e'
+        (.+=) e e' = Assignment False "+=" [e] e'
+        passed p = semanticCheck p @?= Nothing
+        mainFailed p = "main" `isInfixOf` fromJust (semanticCheck p) @?= True
+        rhsFailed p = "left-hand" `isInfixOf` fromJust (semanticCheck p) @?= True
